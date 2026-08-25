@@ -39,7 +39,7 @@ Rails.application.configure do
   # Mount Action Cable outside main process or domain.
   # config.action_cable.mount_path = nil
   # config.action_cable.url = "wss://example.com/cable"
-  PublicAppHost.parse!(ENV["APP_DOMAIN"]) if ENV["APP_DOMAIN"].present?
+  PublicAppHost.configure_host_authorization!(config, ENV["APP_DOMAIN"])
   cable_origins = PublicAppHost.action_cable_origins(ENV["APP_DOMAIN"])
   config.action_cable.allowed_request_origins = cable_origins if cable_origins.any?
 
@@ -77,7 +77,7 @@ Rails.application.configure do
 
   config.action_mailer.perform_caching = false
   config.action_mailer.deliver_later_queue_name = :high_priority
-  config.action_mailer.default_url_options = { host: ENV["APP_DOMAIN"] }
+  config.action_mailer.default_url_options = PublicAppHost.url_options(ENV["APP_DOMAIN"]).presence || { host: ENV["APP_DOMAIN"] }
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
     address:   ENV["SMTP_ADDRESS"],
@@ -100,14 +100,6 @@ Rails.application.configure do
 
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
-
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 
   # set REDIS_URL for Sidekiq to use Redis
   config.active_job.queue_adapter = :sidekiq

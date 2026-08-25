@@ -4,10 +4,10 @@ class PublicAppHost
   def self.parse(domain)
     raw = domain.to_s.strip
     return nil if raw.empty?
+    return nil if raw.match?(%r{[/?#@]})
+    return nil if raw.include?("://")
 
-    raw = "https://#{raw}" unless raw.match?(/\A[a-z][a-z0-9+.-]*:\/\//i)
-
-    uri = URI.parse(raw)
+    uri = URI.parse("https://#{raw}")
     return nil if uri.userinfo.present?
     return nil if uri.host.blank?
     return nil if uri.host.include?(":") # IPv6 literals need explicit support later
@@ -33,6 +33,29 @@ class PublicAppHost
   def self.local?(domain)
     host = parse(domain)
     host.present? && LOOPBACK_HOSTS.include?(host.split(":", 2).first)
+  end
+
+  def self.hostname(domain)
+    parse(domain)&.split(":", 2)&.first
+  end
+
+  def self.allowed_hosts(domain)
+    host = hostname(domain)
+    return [] unless host
+
+    [ host ]
+  end
+
+  def self.configure_host_authorization!(config, domain)
+    return unless config.app_mode.self_hosted?
+
+    parse!(domain)
+    config.hosts = allowed_hosts(domain)
+    config.host_authorization = { exclude: method(:health_check_request?) }
+  end
+
+  def self.health_check_request?(request)
+    request.path == "/up"
   end
 
   def self.url_options(domain)

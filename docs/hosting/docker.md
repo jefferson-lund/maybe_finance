@@ -116,7 +116,9 @@ RAILS_FORCE_SSL=true
 RAILS_ASSUME_SSL=true
 ```
 
-`APP_DOMAIN` must exactly match the hostname you type in the browser (no `https://` required). Rails validates it for Plaid Link redirects, Plaid webhook URLs, and Action Cable origins; mailer links also use the configured value. Public hosts always generate HTTPS Plaid URLs. If Plaid is configured in production, a blank or malformed `APP_DOMAIN` prevents the app from booting instead of generating unsafe or mismatched URLs.
+`APP_DOMAIN` must exactly match the hostname you type in the browser (no `https://` required). Rails validates it for Plaid Link redirects, Plaid webhook URLs, and Action Cable origins; mailer links also use the configured value. Public hosts always generate HTTPS Plaid URLs. Self-hosted production always requires a valid `APP_DOMAIN`; managed production requires it when Plaid is configured.
+
+Self-hosted production rejects requests with any other Host header. Configure reverse proxies to preserve the public Host (for nginx, `proxy_set_header Host $host`) and use the public hostname in your browser rather than the VM’s raw LAN IP. Hostnames match exactly: `localhost` and `127.0.0.1` are different. The `/up` health endpoint is the only exception, so local container probes can use `127.0.0.1`.
 
 In the Plaid Dashboard under Team Settings → API, add the exact Allowed redirect URI that matches how you open the app, for example:
 

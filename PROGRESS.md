@@ -55,6 +55,24 @@ Resolved:
 
 Verification: 28 tests, 70 assertions, zero failures; scoped RuboCop passes.
 
+## Increment 4 — PLAN (2026-08-25)
+
+Canonical Plaid URLs remove Host-header influence from Link, but production still accepts arbitrary HTTP Host headers because Rails host authorization is commented out. This increment will derive a port-free hostname from validated `APP_DOMAIN` and enable `config.hosts` for that hostname plus loopback health access. Tests will cover public hosts, ports, and malformed values; documentation will call out that direct LAN-IP access is intentionally rejected once a public domain is configured.
+
+## Increment 4 — ADVERSARIAL REVIEW
+
+Reviewer: [host authorization review](ae87f2eb-3263-4b9d-890d-e9018a622698)
+
+Resolved:
+- Removed global loopback hosts from the allowlist because a Host-rewriting proxy could otherwise bypass the protection.
+- Restricted the loopback exception to `/up` and added a Compose healthcheck for that endpoint.
+- Required valid `APP_DOMAIN` for every self-hosted production boot while preserving managed-mode host policy; production Plaid still requires a domain in either mode.
+- Tightened `APP_DOMAIN` to a bare hostname/optional port and normalized mailer URL options.
+- Added request-level `ActionDispatch::HostAuthorization` coverage for ports, sibling/hostile/forwarded hosts, and the path-limited health exception.
+- Extracted and tested the production configuration policy for both self-hosted and managed modes.
+
+Verification: 29 tests, 65 assertions, zero failures; scoped RuboCop and Compose validation pass. Docker production boot checks confirm blank self-host configuration fails, blank managed configuration without Plaid boots, and valid self-host configuration sets the exact host and mailer URL options.
+
 ## Scope this loop will not touch
 
 - Cloudflare token rotation (operator dashboard)
