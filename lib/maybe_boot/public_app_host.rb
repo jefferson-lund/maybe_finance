@@ -8,6 +8,8 @@ class PublicAppHost
     return nil if raw.include?("://")
 
     uri = URI.parse("https://#{raw}")
+    explicit_port = raw.match(/:(\d+)\z/)&.captures&.first&.to_i
+    return nil if explicit_port && !explicit_port.between?(1, 65_535)
     return nil if uri.userinfo.present?
     return nil if uri.host.blank?
     return nil if uri.host.include?(":") # IPv6 literals need explicit support later
@@ -15,10 +17,8 @@ class PublicAppHost
     host = uri.host.downcase
     return nil unless host.match?(/\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*\z/)
 
-    port = uri.port
-    default_port = uri.scheme == "http" ? 80 : 443
-    if port && port != default_port
-      "#{host}:#{port}"
+    if explicit_port
+      "#{host}:#{explicit_port}"
     else
       host
     end
@@ -58,23 +58,34 @@ class PublicAppHost
     request.path == "/up"
   end
 
+  def self.configure_action_cable!(config, domain)
+    return unless config.app_mode.self_hosted?
+
+    config.action_cable.allowed_request_origins = action_cable_origins(domain)
+    config.action_cable.allow_same_origin_as_host = false
+  end
+
   def self.url_options(domain)
     host = parse(domain)
     return {} unless host
 
     hostname, port = host.split(":", 2)
+    protocol = local?(host) ? "http" : "https"
+    port = port&.to_i
+    port = nil if (protocol == "http" && port == 80) || (protocol == "https" && port == 443)
 
     {
       host: hostname,
-      protocol: local?(host) ? "http" : "https",
-      port: port&.to_i
+      protocol: protocol,
+      port: port
     }
   end
 
   def self.action_cable_origins(domain)
-    host = parse(domain)
-    return [] unless host
+    options = url_options(domain)
+    return [] if options.empty?
 
-    [ "https://#{host}", "http://#{host}" ]
+    port = ":#{options[:port]}" if options[:port]
+    [ "#{options[:protocol]}://#{options[:host]}#{port}" ]
   end
 end

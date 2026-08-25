@@ -120,6 +120,8 @@ RAILS_ASSUME_SSL=true
 
 Self-hosted production rejects requests with any other Host header. Configure reverse proxies to preserve the public Host (for nginx, `proxy_set_header Host $host`) and use the public hostname in your browser rather than the VM’s raw LAN IP. Hostnames match exactly: `localhost` and `127.0.0.1` are different. The `/up` health endpoint is the only exception, so local container probes can use `127.0.0.1`.
 
+Action Cable applies the same closed origin policy (Rails’ broader same-origin fallback is disabled): a public `APP_DOMAIN=maybe.example.com` accepts only `https://maybe.example.com`, while `APP_DOMAIN=localhost:3000` accepts only `http://localhost:3000`. Do not leave Docker’s internal `:3000` port on a public `APP_DOMAIN` unless users actually browse that non-default HTTPS port; Cloudflare’s normal public URL omits it.
+
 In the Plaid Dashboard under Team Settings → API, add the exact Allowed redirect URI that matches how you open the app, for example:
 
 ```

@@ -73,6 +73,23 @@ Resolved:
 
 Verification: 29 tests, 65 assertions, zero failures; scoped RuboCop and Compose validation pass. Docker production boot checks confirm blank self-host configuration fails, blank managed configuration without Plaid boots, and valid self-host configuration sets the exact host and mailer URL options.
 
+## Increment 5 — PLAN (2026-08-25)
+
+Action Cable currently allowlists both HTTP and HTTPS for every `APP_DOMAIN`, even though Plaid/public deployments are canonical HTTPS and localhost Sandbox is canonical HTTP. This increment will derive one exact WebSocket origin from the same canonical URL policy used by Plaid: HTTPS for public hosts, HTTP for loopback, with the configured port preserved. Tests will prove plaintext public origins and HTTPS localhost origins are rejected by the actual Host/Origin verification path.
+
+## Increment 5 — ADVERSARIAL REVIEW
+
+Reviewer: [Action Cable origin review](9cf9d870-146e-4fd1-b2ed-6e629b950298)
+
+Resolved:
+- Disabled Action Cable’s same-origin fallback for self-hosted production so the opposite scheme cannot bypass the canonical allowlist.
+- Extracted `configure_action_cable!` and tested self-hosted wiring plus managed-mode non-interference.
+- Added connection-level checks against Action Cable’s actual `allow_request_origin?` path for public HTTPS, localhost HTTP, wrong/missing origins, opposite schemes, non-default ports, and Cloudflare-style HTTPS forwarding over internal HTTP.
+- Normalized explicit default ports (`:443` public, `:80` loopback), rejected port zero, and documented that public Cloudflare domains must not inherit Docker’s internal `:3000`.
+- Replaced process-global Action Cable config mutation in tests with an isolated server instance.
+
+Verification: 28 tests, 55 assertions, zero failures; scoped RuboCop passes.
+
 ## Scope this loop will not touch
 
 - Cloudflare token rotation (operator dashboard)

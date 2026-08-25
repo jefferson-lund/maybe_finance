@@ -40,8 +40,7 @@ Rails.application.configure do
   # config.action_cable.mount_path = nil
   # config.action_cable.url = "wss://example.com/cable"
   PublicAppHost.configure_host_authorization!(config, ENV["APP_DOMAIN"])
-  cable_origins = PublicAppHost.action_cable_origins(ENV["APP_DOMAIN"])
-  config.action_cable.allowed_request_origins = cable_origins if cable_origins.any?
+  PublicAppHost.configure_action_cable!(config, ENV["APP_DOMAIN"])
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
   config.force_ssl = ActiveModel::Type::Boolean.new.cast(ENV.fetch("RAILS_FORCE_SSL", true))
