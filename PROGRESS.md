@@ -25,6 +25,18 @@ See files under `lib/maybe_boot/`, `config/initializers/plaid.rb`, `test/models/
 
 Second review ([re-review](f539b065-6a9c-4647-a760-70c4820d4df1)): moved Plaid env assignment in `test/test_helper.rb` before boot; quoted Compose SSL interpolations; always validate `PLAID_ENV` even with Plaid off; added EU/secret-only tests and `.env.example` keys.
 
+## Increment 2 — PLAN (2026-08-25)
+
+Self-hosted Action Cable currently leaves `allowed_request_origins` commented out, so WebSocket upgrades fail when the browser Origin is the public hostname (or a LAN URL). This increment adds a boot-safe host parser that turns `APP_DOMAIN` into http/https origin allowlist entries, applies it in `production.rb`, and documents that `APP_DOMAIN` must match the hostname you browse. No Plaid URL rewriting in this pass.
+
+## Increment 2 — ADVERSARIAL REVIEW
+
+Reviewer: [Action Cable host review](b5d1e0a3-78a4-4382-8080-84f7bcd7325c)
+
+Resolved: parse via `URI` so invalid ports and userinfo are rejected; keep non-default ports on origins; reject IPv6 rather than silently truncating; document that `APP_DOMAIN` must match the browsed hostname for `/cable`.
+
+Deferred: Rails `config.hosts` / DNS rebinding (pre-existing); emitting only `https` origins when `force_ssl` is on (http origin still needed when proto headers disagree).
+
 ## Scope this loop will not touch
 
 - Cloudflare token rotation (operator dashboard)

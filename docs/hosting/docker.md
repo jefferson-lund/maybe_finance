@@ -116,6 +116,8 @@ RAILS_FORCE_SSL=true
 RAILS_ASSUME_SSL=true
 ```
 
+`APP_DOMAIN` must be the hostname you type in the browser (no `https://` required). Rails uses it for mailer links and to allow Action Cable (WebSocket) origins. If it stays `localhost` while you browse `maybe.example.com`, live updates over `/cable` will fail.
+
 In the Plaid Dashboard under Team Settings → API, add the exact Allowed redirect URI that matches how you open the app, for example:
 
 ```
