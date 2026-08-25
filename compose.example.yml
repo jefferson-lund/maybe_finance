@@ -77,6 +77,8 @@ services:
   worker:
     image: ghcr.io/maybe-finance/maybe:latest
     command: bundle exec sidekiq
+    volumes:
+      - app-storage:/rails/storage
     restart: unless-stopped
     depends_on:
       redis:

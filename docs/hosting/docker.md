@@ -210,6 +210,92 @@ docker compose build # This rebuilds the app with updates
 docker compose up --no-deps -d app # This restarts the app using the newest version
 ```
 
+## Back up and restore your data
+
+Docker volumes survive normal container restarts and image updates, but they are not backups. User accounts, financial data, and Plaid connections live in PostgreSQL. Local uploads and generated exports live in the `app-storage` volume.
+
+Keep your `.env` in a secure password manager. A restored instance needs the same `SECRET_KEY_BASE` and, when explicitly configured, the same `ACTIVE_RECORD_ENCRYPTION_*` values to read encrypted fields such as API keys. Preserve provider credentials too. For an existing instance that used Compose’s fallback key, persist the current value (you can inspect it with `docker compose exec -T web printenv SECRET_KEY_BASE`) rather than replacing it and breaking existing ciphertext. Generate a new private key only for a new, empty installation.
+
+The following is explicitly a Bash script, so it behaves consistently when pasted from macOS’s default zsh. It stops writers once, gives the database and local storage the same timestamp, verifies the dump’s table-of-contents without a live `grep -q` pipeline, removes partial output on failure, and restarts the app:
+
+```bash
+bash <<'BASH'
+set -Eeuo pipefail
+umask 077
+
+stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+backup_dir="backups/$stamp"
+dump="$backup_dir/maybe.dump"
+storage="$backup_dir/storage"
+toc="$(mktemp)"
+stopped=false
+database_complete=false
+storage_attempted=false
+storage_complete=false
+
+cleanup() {
+  status=$?
+  set +e
+  trap - EXIT INT TERM
+  rm -f "$toc"
+  if [ "$database_complete" != true ]; then
+    rm -rf "$backup_dir"
+  elif [ "$storage_attempted" = true ] && [ "$storage_complete" != true ]; then
+    rm -rf "$storage"
+  fi
+  if [ "$stopped" = true ]; then
+    if ! docker compose up -d web worker; then
+      echo "Backup output was retained, but web/worker failed to restart. Run: docker compose up -d web worker" >&2
+      status=1
+    fi
+  fi
+  exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+
+mkdir -p "$backup_dir"
+chmod 700 backups "$backup_dir"
+
+storage_service="$(
+  docker compose exec -T web sh -c 'printf %s "${ACTIVE_STORAGE_SERVICE:-local}"'
+)"
+
+stopped=true
+docker compose stop web worker
+
+docker compose exec -T db sh -c \
+  'pg_dump --format=custom --username="$POSTGRES_USER" --dbname="$POSTGRES_DB"' \
+  > "$dump"
+test -s "$dump"
+docker compose exec -T db pg_restore --list < "$dump" > "$toc"
+grep -Eq 'TABLE DATA public (users|accounts) ' "$toc"
+database_complete=true
+echo "Verified database backup: $dump"
+
+docker compose exec -T db postgres --version > "$backup_dir/postgres-version.txt"
+docker compose images > "$backup_dir/compose-images.txt"
+
+if [ "$storage_service" = local ]; then
+  storage_attempted=true
+  mkdir -p "$storage"
+  chmod 700 "$storage"
+  docker compose cp web:/rails/storage/. "$storage"
+  storage_complete=true
+  echo "Copied local storage (not checksummed): $storage"
+else
+  echo "Active Storage uses $storage_service; back up that bucket separately."
+fi
+
+chmod -R go-rwx "$backup_dir"
+echo "Backup metadata and completed output: $backup_dir"
+BASH
+```
+
+The stock Compose file mounts `app-storage` into both web and worker so future background-generated files are included. When upgrading an older Compose deployment, copy anything you still need from the old worker container first (`docker compose cp worker:/rails/storage/. backups/legacy-worker-storage`), then recreate the worker so the new mount takes effect. Existing files in the old container overlay are not migrated automatically. S3/R2 users should back up that bucket instead. Copy each completed timestamp directory off the Docker host and apply retention appropriate for your needs; backups stored only on the same VM will be lost with that VM.
+
+Restore is intentionally not provided as a destructive copy-paste command. PostgreSQL restores must account for the exact Maybe image/schema, PostgreSQL major version, active sessions, migrations, and replacement (not merging) of local storage with ownership restored to container UID 1000. Rehearse the matching database-and-storage pair on a disposable VM first, keep the source instance and a fresh safety dump intact, and only then perform the same tested runbook on the target. Start `web` before `worker` because the web entrypoint runs database preparation. Afterward, sign in, verify attachments, and run an account sync before deleting any older copy.
+
 ## Troubleshooting
 
 ### ActiveRecord::DatabaseConnectionError

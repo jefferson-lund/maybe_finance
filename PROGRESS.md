@@ -90,6 +90,29 @@ Resolved:
 
 Verification: 28 tests, 55 assertions, zero failures; scoped RuboCop passes.
 
+## Increment 6 — PLAN (2026-08-25)
+
+Self-hosted users currently get a persistent Postgres volume but no documented backup workflow, making account and linked-bank continuity dependent on an undeleted Docker volume. This increment will add a timestamped, compressed `pg_dump` procedure and a guarded restore procedure to the Docker hosting guide, including pre-restore backup and service-stop steps. It will not automate destructive restore operations or introduce a new dependency.
+
+## Increment 6 — ADVERSARIAL REVIEW
+
+Reviewer: [backup safety review](2f050e38-08f7-4068-887e-f5e0e7daec49)
+
+Resolved:
+- Replaced shell-dependent snippets with one explicit Bash heredoc using strict mode and private permissions.
+- Stopped web/worker once so the Postgres dump and local storage copy share a timestamp; cleanup always attempts restart.
+- Verified the custom dump contains Maybe `users`/`accounts` table data without a SIGPIPE-prone live pipeline.
+- Preserved verified database output when local storage copy fails and removed only partial storage.
+- Recorded PostgreSQL version and Compose image metadata without writing secrets into the backup.
+- Mounted `app-storage` into the worker and documented migration of any legacy worker-overlay files.
+- Corrected secret guidance: existing installs must preserve their current key rather than rotate it underneath ciphertext.
+
+Changed from the initial plan after review: a generic destructive restore command cannot be made safe across arbitrary schema/image/PostgreSQL versions in a copy-paste guide. It was intentionally removed in favor of rehearsing a matching database-and-storage restore on a disposable VM first. This is a documented scope decision, not a silently dropped review issue.
+
+Residual operational limitations accepted: some Compose versions may not copy from a stopped container; in that case the verified DB dump is retained and the command exits non-zero. Local storage is copied but not checksummed, and restoration remains an operator-tested runbook.
+
+Verification: Compose configuration validates; the documented TOC regex was checked against a real Maybe custom-format test dump.
+
 ## Scope this loop will not touch
 
 - Cloudflare token rotation (operator dashboard)
