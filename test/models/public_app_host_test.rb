@@ -25,7 +25,7 @@ class PublicAppHostTest < ActiveSupport::TestCase
   test "builds canonical HTTPS Action Cable origin for a public host" do
     assert_equal(
       [ "https://maybe.example.com" ],
-      PublicAppHost.action_cable_origins("maybe.example.com")
+      PublicAppHost.action_cable_origins("maybe.example.com", ssl: true)
     )
   end
 
@@ -33,34 +33,34 @@ class PublicAppHostTest < ActiveSupport::TestCase
     assert_equal "maybe.example.com:3000", PublicAppHost.parse("maybe.example.com:3000")
     assert_equal(
       [ "https://maybe.example.com:3000" ],
-      PublicAppHost.action_cable_origins("maybe.example.com:3000")
+      PublicAppHost.action_cable_origins("maybe.example.com:3000", ssl: true)
     )
   end
 
   test "builds canonical HTTP Action Cable origin for localhost" do
     assert_equal(
       [ "http://localhost:3000" ],
-      PublicAppHost.action_cable_origins("localhost:3000")
+      PublicAppHost.action_cable_origins("localhost:3000", ssl: false)
     )
   end
 
   test "omits the default port for each canonical scheme" do
     assert_equal(
       [ "https://maybe.example.com" ],
-      PublicAppHost.action_cable_origins("maybe.example.com:443")
+      PublicAppHost.action_cable_origins("maybe.example.com:443", ssl: true)
     )
     assert_equal(
       [ "http://localhost" ],
-      PublicAppHost.action_cable_origins("localhost:80")
+      PublicAppHost.action_cable_origins("localhost:80", ssl: false)
     )
   end
 
   test "builds a loopback HTTP origin and handles blank configuration" do
     assert_equal(
       [ "http://127.0.0.1:3000" ],
-      PublicAppHost.action_cable_origins("127.0.0.1:3000")
+      PublicAppHost.action_cable_origins("127.0.0.1:3000", ssl: false)
     )
-    assert_equal [], PublicAppHost.action_cable_origins(nil)
+    assert_equal [], PublicAppHost.action_cable_origins(nil, ssl: false)
   end
 
   test "rejects userinfo and IPv6 literals" do
@@ -140,10 +140,20 @@ class PublicAppHostTest < ActiveSupport::TestCase
     assert_nil config.host_authorization
   end
 
+  test "leaves legacy self-hosted Host Authorization open when APP_DOMAIN is blank" do
+    config = ActiveSupport::OrderedOptions.new
+    config.app_mode = "self_hosted".inquiry
+
+    PublicAppHost.configure_host_authorization!(config, nil)
+
+    assert_nil config.hosts
+    assert_nil config.host_authorization
+  end
+
   test "configures canonical Action Cable policy for self-hosted production" do
     config = app_config("self_hosted")
 
-    PublicAppHost.configure_action_cable!(config, "maybe.example.com")
+    PublicAppHost.configure_action_cable!(config, "maybe.example.com", ssl: true)
 
     assert_equal [ "https://maybe.example.com" ], config.action_cable.allowed_request_origins
     assert_equal false, config.action_cable.allow_same_origin_as_host
@@ -154,10 +164,45 @@ class PublicAppHostTest < ActiveSupport::TestCase
     config.action_cable.allowed_request_origins = [ "https://managed.example.com" ]
     config.action_cable.allow_same_origin_as_host = true
 
-    PublicAppHost.configure_action_cable!(config, nil)
+    PublicAppHost.configure_action_cable!(config, nil, ssl: true)
 
     assert_equal [ "https://managed.example.com" ], config.action_cable.allowed_request_origins
     assert_equal true, config.action_cable.allow_same_origin_as_host
+  end
+
+  test "configures HTTP Action Cable origin for a LAN deployment without SSL" do
+    config = app_config("self_hosted")
+
+    PublicAppHost.configure_action_cable!(config, "192.168.1.10:3000", ssl: false)
+
+    assert_equal [ "http://192.168.1.10:3000" ], config.action_cable.allowed_request_origins
+    assert_equal false, config.action_cable.allow_same_origin_as_host
+  end
+
+  test "selects HTTPS for public hosts even when proxy SSL flags are off" do
+    assert PublicAppHost.action_cable_ssl?(
+      "maybe.example.com",
+      ssl_configured: false
+    )
+  end
+
+  test "allows HTTP for private network hosts when proxy SSL flags are off" do
+    refute PublicAppHost.action_cable_ssl?("192.168.1.10:3000", ssl_configured: false)
+    refute PublicAppHost.action_cable_ssl?("maybe.local:3000", ssl_configured: false)
+    refute PublicAppHost.action_cable_ssl?("maybe-server:3000", ssl_configured: false)
+  end
+
+  test "selects HTTPS for private network hosts when SSL is configured" do
+    assert PublicAppHost.action_cable_ssl?("192.168.1.10:3000", ssl_configured: true)
+  end
+
+  test "leaves legacy self-hosted Action Cable policy unchanged when APP_DOMAIN is blank" do
+    config = app_config("self_hosted")
+
+    PublicAppHost.configure_action_cable!(config, nil, ssl: false)
+
+    assert_nil config.action_cable.allowed_request_origins
+    assert_nil config.action_cable.allow_same_origin_as_host
   end
 
   test "Host Authorization accepts only the configured hostname" do
@@ -264,7 +309,11 @@ class PublicAppHostTest < ActiveSupport::TestCase
     def cable_allows?(domain:, request_url:, origin:, headers: {})
       server = ActionCable::Server::Base.new
       config = app_config("self_hosted", action_cable: server.config)
-      PublicAppHost.configure_action_cable!(config, domain)
+      PublicAppHost.configure_action_cable!(
+        config,
+        domain,
+        ssl: PublicAppHost.action_cable_ssl?(domain, ssl_configured: false)
+      )
 
       env = Rack::MockRequest.env_for(
         request_url,

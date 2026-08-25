@@ -2,7 +2,7 @@ class PlaidEnvironment
   NAMES = %w[sandbox production].freeze
 
   def self.apply!(config, require_app_domain: false)
-    normalize(ENV["PLAID_ENV"])
+    environment = normalize(ENV["PLAID_ENV"])
 
     config.plaid = nil
     config.plaid_eu = nil
@@ -20,7 +20,10 @@ class PlaidEnvironment
     )
 
     if require_app_domain && (config.plaid || config.plaid_eu)
-      PublicAppHost.parse!(ENV["APP_DOMAIN"])
+      domain = PublicAppHost.parse!(ENV["APP_DOMAIN"])
+      if environment == "production" && PublicAppHost.local?(domain)
+        raise ArgumentError, "PLAID_ENV=production requires a public APP_DOMAIN served over HTTPS"
+      end
     end
   end
 

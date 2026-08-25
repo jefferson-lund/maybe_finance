@@ -1,5 +1,8 @@
+require "ipaddr"
+
 class PublicAppHost
   LOOPBACK_HOSTS = %w[localhost 127.0.0.1].freeze
+  PRIVATE_IPV4_RANGES = %w[10.0.0.0/8 172.16.0.0/12 192.168.0.0/16].map { IPAddr.new(_1) }.freeze
 
   def self.parse(domain)
     raw = domain.to_s.strip
@@ -48,6 +51,7 @@ class PublicAppHost
 
   def self.configure_host_authorization!(config, domain)
     return unless config.app_mode.self_hosted?
+    return if domain.blank?
 
     parse!(domain)
     config.hosts = allowed_hosts(domain)
@@ -58,11 +62,28 @@ class PublicAppHost
     request.path == "/up"
   end
 
-  def self.configure_action_cable!(config, domain)
+  def self.configure_action_cable!(config, domain, ssl:)
     return unless config.app_mode.self_hosted?
+    return if domain.blank?
 
-    config.action_cable.allowed_request_origins = action_cable_origins(domain)
+    config.action_cable.allowed_request_origins = action_cable_origins(domain, ssl: ssl)
     config.action_cable.allow_same_origin_as_host = false
+  end
+
+  def self.action_cable_ssl?(domain, ssl_configured:)
+    ssl_configured || !local_network?(domain)
+  end
+
+  def self.local_network?(domain)
+    host = hostname(domain)
+    return false unless host
+    return true if LOOPBACK_HOSTS.include?(host)
+    return true if host.end_with?(".local") || !host.include?(".")
+
+    address = IPAddr.new(host)
+    address.ipv4? && PRIVATE_IPV4_RANGES.any? { _1.include?(address) }
+  rescue IPAddr::InvalidAddressError
+    false
   end
 
   def self.url_options(domain)
@@ -81,11 +102,16 @@ class PublicAppHost
     }
   end
 
-  def self.action_cable_origins(domain)
-    options = url_options(domain)
-    return [] if options.empty?
+  def self.action_cable_origins(domain, ssl:)
+    host = parse(domain)
+    return [] unless host
 
-    port = ":#{options[:port]}" if options[:port]
-    [ "#{options[:protocol]}://#{options[:host]}#{port}" ]
+    hostname, port = host.split(":", 2)
+    protocol = ssl ? "https" : "http"
+    port = port&.to_i
+    port = nil if (protocol == "http" && port == 80) || (protocol == "https" && port == 443)
+
+    port = ":#{port}" if port
+    [ "#{protocol}://#{hostname}#{port}" ]
   end
 end

@@ -113,6 +113,31 @@ Residual operational limitations accepted: some Compose versions may not copy fr
 
 Verification: Compose configuration validates; the documented TOC regex was checked against a real Maybe custom-format test dump.
 
+## Increment 7 — PLAN (2026-08-25)
+
+All scoped implementation tasks are committed. This final increment is release-readiness verification across the complete branch: full Rails tests, repository-wide RuboCop, ERB lint, Brakeman, and Compose validation. Any failure caused by this branch will be fixed and adversarially reviewed before a final verification commit; unrelated baseline failures will be recorded with evidence rather than hidden.
+
+## Increment 7 — ADVERSARIAL REVIEW
+
+Reviewer: [final branch audit](53fbd6ef-fe38-4d49-a8d5-30f9659be998)
+
+Resolved four release blockers:
+- Preserved image-only upgrade compatibility by leaving Host/Action Cable policy unchanged when legacy installs omit `APP_DOMAIN`; new Compose also defaults it to blank.
+- Separated LAN/public Cable scheme policy: public hosts remain HTTPS even when container-facing SSL flags are false, while loopback/RFC1918/`.local`/dotless LAN names may use HTTP.
+- Rejected `PLAID_ENV=production` with loopback `APP_DOMAIN`.
+- Upgraded backup verification from TOC inspection to a complete disposable-database restore plus expected-table queries.
+
+Verification:
+- Full Rails suite: 952 tests, 5,818 assertions, zero failures/errors, 9 skips.
+- Repository RuboCop: pass.
+- ERB lint: 332 files, pass.
+- Compose validation: pass.
+- Brakeman scan completed with zero scanner errors and one pre-existing warning: Rails 7.2.2.1 reached end of support on 2026-08-09.
+- Docker production boot checks cover legacy blank domain, LAN HTTP, public HTTPS with SSL env flags off, and Plaid production rejecting localhost.
+- Disposable restore flags were executed successfully against a real Maybe test dump.
+
+Deferred with rationale: upgrading Rails and Brakeman is a repository-wide dependency increment unrelated to this self-host/Plaid branch. `bin/brakeman` currently fails its version gate because the lockfile has Brakeman 7.1.0 instead of 8.0.6; `bundle exec brakeman --no-exit-on-warn` was used to complete the actual scan. This baseline security-maintenance work should be handled separately rather than hidden inside the feature branch.
+
 ## Scope this loop will not touch
 
 - Cloudflare token rotation (operator dashboard)

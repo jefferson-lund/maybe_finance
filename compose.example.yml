@@ -41,7 +41,7 @@ x-rails-env: &rails_env
   DB_HOST: db
   DB_PORT: 5432
   REDIS_URL: redis://redis:6379/1
-  APP_DOMAIN: ${APP_DOMAIN:-localhost:3000}
+  APP_DOMAIN: ${APP_DOMAIN:-}
   PLAID_CLIENT_ID: ${PLAID_CLIENT_ID:-}
   PLAID_SECRET: ${PLAID_SECRET:-}
   PLAID_EU_CLIENT_ID: ${PLAID_EU_CLIENT_ID:-}

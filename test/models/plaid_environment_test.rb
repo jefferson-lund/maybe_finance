@@ -109,6 +109,21 @@ class PlaidEnvironmentTest < ActiveSupport::TestCase
     end
   end
 
+  test "apply! rejects localhost APP_DOMAIN for Plaid production" do
+    with_plaid_env(
+      "PLAID_CLIENT_ID" => "client-id",
+      "PLAID_SECRET" => "secret",
+      "PLAID_ENV" => "production",
+      "APP_DOMAIN" => "localhost:3000"
+    ) do
+      error = assert_raises(ArgumentError) do
+        PlaidEnvironment.apply!(@config, require_app_domain: true)
+      end
+
+      assert_match(/requires a public APP_DOMAIN/, error.message)
+    end
+  end
+
   private
     def with_plaid_env(overrides)
       keys = %w[PLAID_CLIENT_ID PLAID_SECRET PLAID_EU_CLIENT_ID PLAID_EU_SECRET PLAID_ENV APP_DOMAIN]

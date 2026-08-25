@@ -39,15 +39,21 @@ Rails.application.configure do
   # Mount Action Cable outside main process or domain.
   # config.action_cable.mount_path = nil
   # config.action_cable.url = "wss://example.com/cable"
+  force_ssl = ActiveModel::Type::Boolean.new.cast(ENV.fetch("RAILS_FORCE_SSL", true))
+  assume_ssl = ActiveModel::Type::Boolean.new.cast(ENV.fetch("RAILS_ASSUME_SSL", true))
+  cable_ssl = PublicAppHost.action_cable_ssl?(
+    ENV["APP_DOMAIN"],
+    ssl_configured: force_ssl || assume_ssl
+  )
   PublicAppHost.configure_host_authorization!(config, ENV["APP_DOMAIN"])
-  PublicAppHost.configure_action_cable!(config, ENV["APP_DOMAIN"])
+  PublicAppHost.configure_action_cable!(config, ENV["APP_DOMAIN"], ssl: cable_ssl)
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-  config.force_ssl = ActiveModel::Type::Boolean.new.cast(ENV.fetch("RAILS_FORCE_SSL", true))
+  config.force_ssl = force_ssl
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   # Can be used together with config.force_ssl for Strict-Transport-Security and secure cookies.
-  config.assume_ssl = ActiveModel::Type::Boolean.new.cast(ENV.fetch("RAILS_ASSUME_SSL", true))
+  config.assume_ssl = assume_ssl
 
   # Log to Logtail if API key is present, otherwise log to STDOUT
   base_logger = if ENV["LOGTAIL_API_KEY"].present? && ENV["LOGTAIL_INGESTING_HOST"].present?

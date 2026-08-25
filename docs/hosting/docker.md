@@ -116,11 +116,11 @@ RAILS_FORCE_SSL=true
 RAILS_ASSUME_SSL=true
 ```
 
-`APP_DOMAIN` must exactly match the hostname you type in the browser (no `https://` required). Rails validates it for Plaid Link redirects, Plaid webhook URLs, and Action Cable origins; mailer links also use the configured value. Public hosts always generate HTTPS Plaid URLs. Self-hosted production always requires a valid `APP_DOMAIN`; managed production requires it when Plaid is configured.
+`APP_DOMAIN` must exactly match the hostname you type in the browser (no `https://` required). When configured, Rails validates it for Plaid Link redirects, Plaid webhook URLs, Action Cable origins, and Host Authorization; mailer links also use the configured value. Legacy self-hosted installs without `APP_DOMAIN` keep their existing request-host behavior so image-only upgrades still boot. Any production deployment with Plaid credentials requires `APP_DOMAIN`, and `PLAID_ENV=production` rejects loopback hosts.
 
-Self-hosted production rejects requests with any other Host header. Configure reverse proxies to preserve the public Host (for nginx, `proxy_set_header Host $host`) and use the public hostname in your browser rather than the VM’s raw LAN IP. Hostnames match exactly: `localhost` and `127.0.0.1` are different. The `/up` health endpoint is the only exception, so local container probes can use `127.0.0.1`.
+Once `APP_DOMAIN` is configured, self-hosted production rejects requests with any other Host header. Configure reverse proxies to preserve the public Host (for nginx, `proxy_set_header Host $host`) and use the same hostname in your browser. Hostnames match exactly: `localhost` and `127.0.0.1` are different. The `/up` health endpoint is the only exception, so local container probes can use `127.0.0.1`.
 
-Action Cable applies the same closed origin policy (Rails’ broader same-origin fallback is disabled): a public `APP_DOMAIN=maybe.example.com` accepts only `https://maybe.example.com`, while `APP_DOMAIN=localhost:3000` accepts only `http://localhost:3000`. Do not leave Docker’s internal `:3000` port on a public `APP_DOMAIN` unless users actually browse that non-default HTTPS port; Cloudflare’s normal public URL omits it.
+Action Cable applies the same closed origin policy when `APP_DOMAIN` is set. Public hostnames always select HTTPS, including Cloudflare deployments whose container-facing SSL flags are off. Private IPs, `.local` names, dotless LAN names, and loopback may use HTTP when `RAILS_FORCE_SSL` and `RAILS_ASSUME_SSL` are both false. For example, a tunneled `APP_DOMAIN=maybe.example.com` accepts `https://maybe.example.com`, while Sandbox `APP_DOMAIN=localhost:3000` accepts `http://localhost:3000`. Do not leave Docker’s internal `:3000` port on a public `APP_DOMAIN` unless users actually browse that non-default HTTPS port; Cloudflare’s normal public URL omits it.
 
 In the Plaid Dashboard under Team Settings → API, add the exact Allowed redirect URI that matches how you open the app, for example:
 
@@ -228,8 +228,10 @@ backup_dir="backups/$stamp"
 dump="$backup_dir/maybe.dump"
 storage="$backup_dir/storage"
 toc="$(mktemp)"
+verify_db="maybe_verify_${stamp}"
 stopped=false
 database_complete=false
+verify_db_created=false
 storage_attempted=false
 storage_complete=false
 
@@ -238,6 +240,10 @@ cleanup() {
   set +e
   trap - EXIT INT TERM
   rm -f "$toc"
+  if [ "$verify_db_created" = true ]; then
+    docker compose exec -T -e VERIFY_DB="$verify_db" db sh -c \
+      'dropdb --if-exists --username="$POSTGRES_USER" "$VERIFY_DB"'
+  fi
   if [ "$database_complete" != true ]; then
     rm -rf "$backup_dir"
   elif [ "$storage_attempted" = true ] && [ "$storage_complete" != true ]; then
@@ -270,8 +276,23 @@ docker compose exec -T db sh -c \
 test -s "$dump"
 docker compose exec -T db pg_restore --list < "$dump" > "$toc"
 grep -Eq 'TABLE DATA public (users|accounts) ' "$toc"
+
+docker compose exec -T -e VERIFY_DB="$verify_db" db sh -c \
+  'createdb --username="$POSTGRES_USER" "$VERIFY_DB"'
+verify_db_created=true
+docker compose exec -T -e VERIFY_DB="$verify_db" db sh -c \
+  'pg_restore --exit-on-error --single-transaction --no-owner --no-privileges \
+    --username="$POSTGRES_USER" --dbname="$VERIFY_DB"' \
+  < "$dump"
+docker compose exec -T -e VERIFY_DB="$verify_db" db sh -c \
+  'psql --username="$POSTGRES_USER" --dbname="$VERIFY_DB" --set=ON_ERROR_STOP=1 \
+    --command="SELECT 1 FROM users LIMIT 1; SELECT 1 FROM accounts LIMIT 1;"'
+docker compose exec -T -e VERIFY_DB="$verify_db" db sh -c \
+  'dropdb --username="$POSTGRES_USER" "$VERIFY_DB"'
+verify_db_created=false
+
 database_complete=true
-echo "Verified database backup: $dump"
+echo "Verified database backup with disposable restore: $dump"
 
 docker compose exec -T db postgres --version > "$backup_dir/postgres-version.txt"
 docker compose images > "$backup_dir/compose-images.txt"
@@ -293,6 +314,8 @@ BASH
 ```
 
 The stock Compose file mounts `app-storage` into both web and worker so future background-generated files are included. When upgrading an older Compose deployment, copy anything you still need from the old worker container first (`docker compose cp worker:/rails/storage/. backups/legacy-worker-storage`), then recreate the worker so the new mount takes effect. Existing files in the old container overlay are not migrated automatically. S3/R2 users should back up that bucket instead. Copy each completed timestamp directory off the Docker host and apply retention appropriate for your needs; backups stored only on the same VM will be lost with that VM.
+
+The script verifies every archive by restoring it into a disposable database and querying expected tables; listing the archive alone does not prove that its data blocks are intact.
 
 Restore is intentionally not provided as a destructive copy-paste command. PostgreSQL restores must account for the exact Maybe image/schema, PostgreSQL major version, active sessions, migrations, and replacement (not merging) of local storage with ownership restored to container UID 1000. Rehearse the matching database-and-storage pair on a disposable VM first, keep the source instance and a fresh safety dump intact, and only then perform the same tested runbook on the target. Start `web` before `worker` because the web entrypoint runs database preparation. Afterward, sign in, verify attachments, and run an account sync before deleting any older copy.
 
