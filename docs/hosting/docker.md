@@ -94,6 +94,36 @@ SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
 
+If you will connect banks with Plaid, also set:
+
+```txt
+PLAID_CLIENT_ID="your-plaid-client-id"
+PLAID_SECRET="your-plaid-secret"
+PLAID_ENV=sandbox
+```
+
+Use `PLAID_ENV=sandbox` with Sandbox keys, or `PLAID_ENV=production` with Production keys. Both `PLAID_CLIENT_ID` and `PLAID_SECRET` must be set together (same for the optional `PLAID_EU_*` pair). Plaid retired the Development environment; `PLAID_ENV=development` will prevent the app from booting.
+
+**Sandbox on localhost:** Plaid allows `http://localhost:3000/accounts` as a redirect URI in Sandbox only. You can test Link locally without HTTPS.
+
+**Production or any non-localhost host:** Plaid requires HTTPS. Terminate TLS in front of the app (Cloudflare Tunnel, Caddy, nginx, etc.) and point that proxy at **HTTP** `localhost:3000` — the Rails process itself does not speak TLS. Forward the public `Host` header (for Cloudflare Tunnel, the public hostname). The app builds Plaid's `redirect_uri` from the incoming request (`https://THAT_HOST/accounts`), not from `APP_DOMAIN`.
+
+Also set:
+
+```txt
+APP_DOMAIN=maybe.example.com
+RAILS_FORCE_SSL=true
+RAILS_ASSUME_SSL=true
+```
+
+In the Plaid Dashboard under Team Settings → API, add the exact Allowed redirect URI that matches how you open the app, for example:
+
+```
+https://YOUR_HOSTNAME/accounts
+```
+
+Do not start Link from a raw LAN IP such as `http://192.168.x.x:3000` if you have already allowlisted the public HTTPS hostname; the redirect URI will not match.
+
 ### Step 4: Run the app
 
 You are now ready to run the app. Start with the following command to make sure everything is working:
