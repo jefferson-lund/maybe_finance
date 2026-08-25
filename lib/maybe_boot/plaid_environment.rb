@@ -1,7 +1,7 @@
 class PlaidEnvironment
   NAMES = %w[sandbox production].freeze
 
-  def self.apply!(config)
+  def self.apply!(config, require_app_domain: false)
     normalize(ENV["PLAID_ENV"])
 
     config.plaid = nil
@@ -18,6 +18,10 @@ class PlaidEnvironment
       secret: ENV["PLAID_EU_SECRET"],
       pair_name: "PLAID_EU_CLIENT_ID and PLAID_EU_SECRET"
     )
+
+    if require_app_domain && (config.plaid || config.plaid_eu)
+      PublicAppHost.parse!(ENV["APP_DOMAIN"])
+    end
   end
 
   def self.normalize(name)

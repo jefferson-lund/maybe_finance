@@ -34,4 +34,28 @@ class PublicAppHostTest < ActiveSupport::TestCase
     assert_nil PublicAppHost.parse("https://alice:secret@maybe.example.com")
     assert_nil PublicAppHost.parse("2001:db8::1")
   end
+
+  test "parse! raises for malformed APP_DOMAIN" do
+    error = assert_raises(ArgumentError) { PublicAppHost.parse!("not a host") }
+
+    assert_match(/Invalid APP_DOMAIN/, error.message)
+  end
+
+  test "builds canonical HTTPS URL options for public hosts" do
+    assert_equal(
+      { host: "maybe.example.com", protocol: "https", port: nil },
+      PublicAppHost.url_options("maybe.example.com")
+    )
+  end
+
+  test "keeps fallback protocol for localhost" do
+    assert_equal(
+      { host: "localhost", protocol: "http", port: 3000 },
+      PublicAppHost.url_options("localhost:3000")
+    )
+  end
+
+  test "returns empty URL options when APP_DOMAIN is blank" do
+    assert_equal({}, PublicAppHost.url_options(nil))
+  end
 end

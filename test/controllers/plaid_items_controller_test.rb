@@ -6,6 +6,75 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user = users(:family_admin)
   end
 
+  test "new uses APP_DOMAIN for Plaid redirect despite a different request host" do
+    Rails.env.stubs(:production?).returns(true)
+    Family.any_instance.expects(:get_link_token).with(
+      webhooks_url: "https://maybe.example.com/webhooks/plaid",
+      redirect_url: "https://maybe.example.com/accounts",
+      accountable_type: "Depository",
+      region: :us
+    ).returns("test-link-token")
+
+    with_env_overrides("APP_DOMAIN" => "maybe.example.com") do
+      host! "evil.example:8443"
+      sign_in @user
+      get new_plaid_item_path
+    end
+
+    assert_response :success
+  end
+
+  test "new uses APP_DOMAIN for EU Plaid webhook" do
+    Rails.env.stubs(:production?).returns(true)
+    Family.any_instance.expects(:get_link_token).with(
+      webhooks_url: "https://maybe.example.com/webhooks/plaid_eu",
+      redirect_url: "https://maybe.example.com/accounts",
+      accountable_type: "Depository",
+      region: :eu
+    ).returns("test-link-token")
+
+    with_env_overrides("APP_DOMAIN" => "maybe.example.com") do
+      host! "evil.example"
+      sign_in @user
+      get new_plaid_item_path(region: "eu")
+    end
+
+    assert_response :success
+  end
+
+  test "edit uses APP_DOMAIN for update Link token" do
+    Rails.env.stubs(:production?).returns(true)
+    PlaidItem.any_instance.expects(:get_update_link_token).with(
+      webhooks_url: "https://maybe.example.com/webhooks/plaid",
+      redirect_url: "https://maybe.example.com/accounts"
+    ).returns("test-link-token")
+
+    with_env_overrides("APP_DOMAIN" => "maybe.example.com") do
+      host! "evil.example"
+      sign_in @user
+      get edit_plaid_item_path(plaid_items(:one))
+    end
+
+    assert_response :success
+  end
+
+  test "new preserves HTTP and port for localhost Sandbox" do
+    Family.any_instance.expects(:get_link_token).with(
+      webhooks_url: "http://evil.example/webhooks/plaid",
+      redirect_url: "http://localhost:3000/accounts",
+      accountable_type: "Depository",
+      region: :us
+    ).returns("test-link-token")
+
+    with_env_overrides("APP_DOMAIN" => "localhost:3000") do
+      host! "evil.example"
+      sign_in @user
+      get new_plaid_item_path
+    end
+
+    assert_response :success
+  end
+
   test "create" do
     @plaid_provider = mock
     Provider::Registry.expects(:plaid_provider_for_region).with("us").returns(@plaid_provider)

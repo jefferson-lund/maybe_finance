@@ -1,4 +1,6 @@
 class PublicAppHost
+  LOOPBACK_HOSTS = %w[localhost 127.0.0.1].freeze
+
   def self.parse(domain)
     raw = domain.to_s.strip
     return nil if raw.empty?
@@ -22,6 +24,28 @@ class PublicAppHost
     end
   rescue URI::InvalidURIError
     nil
+  end
+
+  def self.parse!(domain)
+    parse(domain) || raise(ArgumentError, "Invalid APP_DOMAIN=#{domain.inspect}. Use a hostname, optionally with a port.")
+  end
+
+  def self.local?(domain)
+    host = parse(domain)
+    host.present? && LOOPBACK_HOSTS.include?(host.split(":", 2).first)
+  end
+
+  def self.url_options(domain)
+    host = parse(domain)
+    return {} unless host
+
+    hostname, port = host.split(":", 2)
+
+    {
+      host: hostname,
+      protocol: local?(host) ? "http" : "https",
+      port: port&.to_i
+    }
   end
 
   def self.action_cable_origins(domain)

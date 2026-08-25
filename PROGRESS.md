@@ -37,6 +37,24 @@ Resolved: parse via `URI` so invalid ports and userinfo are rejected; keep non-d
 
 Deferred: Rails `config.hosts` / DNS rebinding (pre-existing); emitting only `https` origins when `force_ssl` is on (http origin still needed when proto headers disagree).
 
+## Increment 3 — PLAN (2026-08-25)
+
+Plaid Link and webhook URLs still inherit the incoming `Host`, so a raw LAN request or spoofed proxy host can generate a redirect URI that does not match Plaid’s allowlist. This increment will make `PlaidItemsController` use validated `APP_DOMAIN` URL options when configured, force HTTPS for non-local hosts, preserve request-derived localhost behavior for Sandbox, and fail production boot on a malformed `APP_DOMAIN`. Controller and parser tests will cover canonical URLs, hostile Host headers, localhost fallback, and malformed configuration.
+
+## Increment 3 — ADVERSARIAL REVIEW
+
+Reviewers: [canonical URL review](af44332d-5235-4224-8ebf-884cc6ad9e08), [port-isolation re-review](8637f4d9-65ca-4266-a59a-393a83eecc74)
+
+Resolved:
+- Changed the Compose and env-template default to `localhost:3000`, so Sandbox’s allowlisted redirect keeps its port.
+- Production Plaid now requires a valid `APP_DOMAIN`; blank configuration no longer falls back to a request-controlled Host.
+- Added production-path coverage for US/EU webhooks and update-mode Link.
+- Pinned localhost Sandbox to HTTP and public hosts to HTTPS.
+- Split canonical host and port into explicit Rails URL options, including `port: nil`, so a spoofed request port cannot contaminate Plaid URLs.
+- Updated hosting docs to describe `APP_DOMAIN` as the canonical Plaid URL source.
+
+Verification: 28 tests, 70 assertions, zero failures; scoped RuboCop passes.
+
 ## Scope this loop will not touch
 
 - Cloudflare token rotation (operator dashboard)

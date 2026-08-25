@@ -39,7 +39,7 @@ Rails.application.configure do
   # Mount Action Cable outside main process or domain.
   # config.action_cable.mount_path = nil
   # config.action_cable.url = "wss://example.com/cable"
-  require Rails.root.join("lib/maybe_boot/public_app_host")
+  PublicAppHost.parse!(ENV["APP_DOMAIN"]) if ENV["APP_DOMAIN"].present?
   cable_origins = PublicAppHost.action_cable_origins(ENV["APP_DOMAIN"])
   config.action_cable.allowed_request_origins = cable_origins if cable_origins.any?
 

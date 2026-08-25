@@ -1,4 +1,5 @@
 require_relative "boot"
+require_relative "../lib/maybe_boot/public_app_host"
 
 require "rails/all"
 

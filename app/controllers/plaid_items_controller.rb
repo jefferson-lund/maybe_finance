@@ -7,7 +7,7 @@ class PlaidItemsController < ApplicationController
 
     @link_token = Current.family.get_link_token(
       webhooks_url: webhooks_url,
-      redirect_url: accounts_url,
+      redirect_url: plaid_accounts_url,
       accountable_type: params[:accountable_type] || "Depository",
       region: region
     )
@@ -18,7 +18,7 @@ class PlaidItemsController < ApplicationController
 
     @link_token = @plaid_item.get_update_link_token(
       webhooks_url: webhooks_url,
-      redirect_url: accounts_url,
+      redirect_url: plaid_accounts_url,
     )
   end
 
@@ -61,15 +61,23 @@ class PlaidItemsController < ApplicationController
       plaid_item_params.dig(:metadata, :institution, :name)
     end
 
+    def plaid_accounts_url
+      accounts_url(**public_app_url_options)
+    end
+
     def plaid_us_webhooks_url
-      return webhooks_plaid_url if Rails.env.production?
+      return webhooks_plaid_url(**public_app_url_options) if Rails.env.production?
 
       ENV.fetch("DEV_WEBHOOKS_URL", root_url.chomp("/")) + "/webhooks/plaid"
     end
 
     def plaid_eu_webhooks_url
-      return webhooks_plaid_eu_url if Rails.env.production?
+      return webhooks_plaid_eu_url(**public_app_url_options) if Rails.env.production?
 
       ENV.fetch("DEV_WEBHOOKS_URL", root_url.chomp("/")) + "/webhooks/plaid_eu"
+    end
+
+    def public_app_url_options
+      PublicAppHost.url_options(ENV["APP_DOMAIN"])
     end
 end

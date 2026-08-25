@@ -94,9 +94,24 @@ class PlaidEnvironmentTest < ActiveSupport::TestCase
     end
   end
 
+  test "apply! requires valid APP_DOMAIN for configured production Plaid" do
+    with_plaid_env(
+      "PLAID_CLIENT_ID" => "client-id",
+      "PLAID_SECRET" => "secret",
+      "PLAID_ENV" => "production",
+      "APP_DOMAIN" => ""
+    ) do
+      error = assert_raises(ArgumentError) do
+        PlaidEnvironment.apply!(@config, require_app_domain: true)
+      end
+
+      assert_match(/Invalid APP_DOMAIN/, error.message)
+    end
+  end
+
   private
     def with_plaid_env(overrides)
-      keys = %w[PLAID_CLIENT_ID PLAID_SECRET PLAID_EU_CLIENT_ID PLAID_EU_SECRET PLAID_ENV]
+      keys = %w[PLAID_CLIENT_ID PLAID_SECRET PLAID_EU_CLIENT_ID PLAID_EU_SECRET PLAID_ENV APP_DOMAIN]
       previous = keys.index_with { |key| ENV[key] }
 
       keys.each { |key| ENV.delete(key) }

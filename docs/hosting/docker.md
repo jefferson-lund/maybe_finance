@@ -104,9 +104,9 @@ PLAID_ENV=sandbox
 
 Use `PLAID_ENV=sandbox` with Sandbox keys, or `PLAID_ENV=production` with Production keys. Both `PLAID_CLIENT_ID` and `PLAID_SECRET` must be set together (same for the optional `PLAID_EU_*` pair). Plaid retired the Development environment; `PLAID_ENV=development` will prevent the app from booting.
 
-**Sandbox on localhost:** Plaid allows `http://localhost:3000/accounts` as a redirect URI in Sandbox only. You can test Link locally without HTTPS.
+**Sandbox on localhost:** Plaid allows `http://localhost:3000/accounts` as a redirect URI in Sandbox only. Keep `APP_DOMAIN=localhost:3000`; you can test Link locally without HTTPS.
 
-**Production or any non-localhost host:** Plaid requires HTTPS. Terminate TLS in front of the app (Cloudflare Tunnel, Caddy, nginx, etc.) and point that proxy at **HTTP** `localhost:3000` — the Rails process itself does not speak TLS. Forward the public `Host` header (for Cloudflare Tunnel, the public hostname). The app builds Plaid's `redirect_uri` from the incoming request (`https://THAT_HOST/accounts`), not from `APP_DOMAIN`.
+**Production or any non-localhost host:** Plaid requires HTTPS. Terminate TLS in front of the app (Cloudflare Tunnel, Caddy, nginx, etc.) and point that proxy at **HTTP** `localhost:3000` — the Rails process itself does not speak TLS.
 
 Also set:
 
@@ -116,7 +116,7 @@ RAILS_FORCE_SSL=true
 RAILS_ASSUME_SSL=true
 ```
 
-`APP_DOMAIN` must be the hostname you type in the browser (no `https://` required). Rails uses it for mailer links and to allow Action Cable (WebSocket) origins. If it stays `localhost` while you browse `maybe.example.com`, live updates over `/cable` will fail.
+`APP_DOMAIN` must exactly match the hostname you type in the browser (no `https://` required). Rails validates it for Plaid Link redirects, Plaid webhook URLs, and Action Cable origins; mailer links also use the configured value. Public hosts always generate HTTPS Plaid URLs. If Plaid is configured in production, a blank or malformed `APP_DOMAIN` prevents the app from booting instead of generating unsafe or mismatched URLs.
 
 In the Plaid Dashboard under Team Settings → API, add the exact Allowed redirect URI that matches how you open the app, for example:
 
@@ -124,7 +124,7 @@ In the Plaid Dashboard under Team Settings → API, add the exact Allowed redire
 https://YOUR_HOSTNAME/accounts
 ```
 
-Do not start Link from a raw LAN IP such as `http://192.168.x.x:3000` if you have already allowlisted the public HTTPS hostname; the redirect URI will not match.
+Use the public hostname when linking accounts so cookies and WebSockets share the same secure origin. Plaid URLs remain pinned to `APP_DOMAIN` even if a proxy forwards a different request host or port.
 
 ### Step 4: Run the app
 
