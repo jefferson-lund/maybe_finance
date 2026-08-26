@@ -54,6 +54,12 @@ module Syncable
     latest_sync&.completed_at
   end
 
+  # Unlike last_synced_at, this ignores any in-flight or abandoned sync that
+  # followed the last successful one.
+  def last_completed_sync_at
+    syncs.completed.ordered.first&.completed_at
+  end
+
   def last_sync_created_at
     latest_sync&.created_at
   end

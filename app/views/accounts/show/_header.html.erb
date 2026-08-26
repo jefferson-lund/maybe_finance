@@ -28,6 +28,18 @@
 
     <div class="flex items-center gap-1 ml-auto">
       <% if Rails.env.development? || self_hosted? %>
+        <% last_synced_at = account.last_completed_sync_at %>
+        <% sync_status = if account.syncing?
+             "Syncing…"
+           elsif last_synced_at
+             "Synced #{time_ago_in_words(last_synced_at)} ago"
+           else
+             "Never synced"
+           end %>
+        <%= tag.p sync_status,
+              class: "text-xs text-subdued whitespace-nowrap mr-1",
+              title: last_synced_at&.strftime("%b %-d, %Y at %-l:%M %p %Z") %>
+
         <%= icon(
             "refresh-cw",
             as_button: true,
