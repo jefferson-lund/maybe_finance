@@ -39,9 +39,9 @@ class Rule < ApplicationRecord
     matching_resources_scope.count
   end
 
-  def apply(ignore_attribute_locks: false)
+  def apply(ignore_attribute_locks: false, resources: nil)
     actions.each do |action|
-      action.apply(matching_resources_scope, ignore_attribute_locks: ignore_attribute_locks)
+      action.apply(matching_resources_scope(resources:), ignore_attribute_locks: ignore_attribute_locks)
     end
   end
 
@@ -62,8 +62,9 @@ class Rule < ApplicationRecord
   end
 
   private
-    def matching_resources_scope
+    def matching_resources_scope(resources: nil)
       scope = registry.resource_scope
+      scope = scope.merge(resources) if resources
 
       # 1. Prepare the query with joins required by conditions
       conditions.each do |condition|

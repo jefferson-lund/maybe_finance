@@ -138,6 +138,20 @@ Verification:
 
 Deferred with rationale: upgrading Rails and Brakeman is a repository-wide dependency increment unrelated to this self-host/Plaid branch. `bin/brakeman` currently fails its version gate because the lockfile has Brakeman 7.1.0 instead of 8.0.6; `bundle exec brakeman --no-exit-on-warn` was used to complete the actual scan. This baseline security-maintenance work should be handled separately rather than hidden inside the feature branch.
 
+## Increment 8 — Household budgeting (2026-08-27)
+
+Modeled the household budget workbook inside the app instead of a spreadsheet. Budgets open on the complete previous calendar month, expense categories carry a `needs`/`wants` bucket that subcategories inherit, and savings is the residual of actual income minus actual spending so the 50/30/20 panel never double-counts transfers.
+
+`BudgetAllocation` records the workbook's percentage waterfall (next month's tithing, Schwab IRA, LTS, two fun-money envelopes). Rules are editable and prefilled from workbook defaults, copied forward from the prior month when a budget is bootstrapped. Targets may draw from all income, one selected income category and its subcategories, or remaining cash; actuals come from categorized expenses or `funds_movement` inflows into a destination account, with an optional month offset for accrual-style rules like tithing. Allocations are planning-only: they compute targets and compare them with existing activity, and never create entries or move money.
+
+Category memory works like Honeydue. Reassigning a categorized transaction that has a merchant upserts a family-scoped merchant rule, so future transactions from that merchant land in the chosen category. Rule execution was tightened alongside it: family syncs schedule only active rules, and Plaid enrichment applies rules to just the newly processed transactions while preserving user attribute locks.
+
+Verification:
+- Full Rails suite: 963 tests, 5,858 assertions, zero failures/errors, 9 skips (Plaid sandbox credentials required in env).
+- Repository RuboCop: pass. ERB lint on touched view directories: pass.
+- Brakeman: no new warnings.
+- Exercised end-to-end against a disposable local Docker instance seeded with demo data.
+
 ## Scope this loop will not touch
 
 - Cloudflare token rotation (operator dashboard)

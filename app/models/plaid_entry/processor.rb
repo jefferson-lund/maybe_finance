@@ -43,6 +43,8 @@ class PlaidEntry::Processor
           source: "plaid"
         )
       end
+
+      entry.transaction
     end
   end
 

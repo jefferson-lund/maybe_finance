@@ -27,4 +27,24 @@ class Family::SyncerTest < ActiveSupport::TestCase
 
     assert_equal "completed", family_sync.reload.status
   end
+
+  test "only schedules active rules" do
+    category = categories(:food_and_drink)
+    @family.rules.create!(
+      resource_type: "transaction",
+      active: true,
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id) ]
+    )
+    @family.rules.create!(
+      resource_type: "transaction",
+      active: false,
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id) ]
+    )
+
+    Rule.any_instance.expects(:apply_later).once
+    Account.any_instance.stubs(:sync_later)
+    PlaidItem.any_instance.stubs(:sync_later)
+
+    Family::Syncer.new(@family).perform_sync(syncs(:family))
+  end
 end

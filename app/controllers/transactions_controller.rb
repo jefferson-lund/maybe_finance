@@ -76,14 +76,7 @@ class TransactionsController < ApplicationController
   def update
     if @entry.update(entry_params)
       transaction = @entry.transaction
-
-      if needs_rule_notification?(transaction)
-        flash[:cta] = {
-          type: "category_rule",
-          category_id: transaction.category_id,
-          category_name: transaction.category.name
-        }
-      end
+      Rule::CategoryMemory.remember!(transaction)
 
       @entry.sync_account_later
       @entry.lock_saved_attributes!
@@ -111,18 +104,6 @@ class TransactionsController < ApplicationController
   private
     def per_page
       params[:per_page].to_i.positive? ? params[:per_page].to_i : 20
-    end
-
-    def needs_rule_notification?(transaction)
-      return false if Current.user.rule_prompts_disabled
-
-      if Current.user.rule_prompt_dismissed_at.present?
-        time_since_last_rule_prompt = Time.current - Current.user.rule_prompt_dismissed_at
-        return false if time_since_last_rule_prompt < 1.day
-      end
-
-      transaction.saved_change_to_category_id? && transaction.category_id.present? &&
-      transaction.eligible_for_category_rule?
     end
 
     def entry_params

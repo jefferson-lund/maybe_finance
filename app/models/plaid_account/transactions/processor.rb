@@ -6,12 +6,12 @@ class PlaidAccount::Transactions::Processor
   def process
     # Each entry is processed inside a transaction, but to avoid locking up the DB when
     # there are hundreds or thousands of transactions, we process them individually.
-    modified_transactions.each do |transaction|
+    processed_transaction_ids = modified_transactions.filter_map do |transaction|
       PlaidEntry::Processor.new(
         transaction,
         plaid_account: plaid_account,
         category_matcher: category_matcher
-      ).process
+      ).process&.id
     end
 
     PlaidAccount.transaction do
@@ -19,6 +19,8 @@ class PlaidAccount::Transactions::Processor
         remove_plaid_transaction(transaction)
       end
     end
+
+    apply_rules(processed_transaction_ids)
   end
 
   private
@@ -44,6 +46,15 @@ class PlaidAccount::Transactions::Processor
 
     def remove_plaid_transaction(raw_transaction)
       account.entries.find_by(plaid_id: raw_transaction["transaction_id"])&.destroy
+    end
+
+    def apply_rules(transaction_ids)
+      return if transaction_ids.empty?
+
+      transactions = account.family.transactions.where(id: transaction_ids)
+      account.family.rules.where(active: true).find_each do |rule|
+        rule.apply(resources: transactions)
+      end
     end
 
     # Since we find_or_create_by transactions, we don't need a distinction between added/modified

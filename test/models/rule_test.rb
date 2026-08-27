@@ -28,6 +28,22 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal @groceries_category, transaction_entry.transaction.category
   end
 
+  test "can apply to only newly processed transactions" do
+    matching_entry = create_transaction(date: Date.current, account: @account, merchant: @whole_foods_merchant)
+    historical_entry = create_transaction(date: 1.day.ago, account: @account, merchant: @whole_foods_merchant)
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: @whole_foods_merchant.id) ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ]
+    )
+
+    rule.apply(resources: @family.transactions.where(id: matching_entry.transaction.id))
+
+    assert_equal @groceries_category, matching_entry.transaction.reload.category
+    assert_nil historical_entry.transaction.reload.category
+  end
+
   test "compound rule" do
     transaction_entry1 = create_transaction(date: Date.current, amount: 50, account: @account, merchant: @whole_foods_merchant)
     transaction_entry2 = create_transaction(date: Date.current, amount: 100, account: @account, merchant: @whole_foods_merchant)

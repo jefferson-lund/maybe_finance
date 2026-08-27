@@ -60,4 +60,28 @@ class PlaidAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
 
     assert_nil Entry.find_by(plaid_id: destroyable_transaction_id)
   end
+
+  test "applies active rules after plaid enrichment" do
+    raw_transaction = { "transaction_id" => "remembered" }
+    @plaid_account.update!(raw_transactions_payload: {
+      added: [ raw_transaction ],
+      modified: [],
+      removed: []
+    })
+    family = @plaid_account.account.family
+    family.rules.create!(
+      resource_type: "transaction",
+      active: true,
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id) ]
+    )
+    processed_transaction = transactions(:one)
+    sequence = sequence("plaid then rules")
+    mock_processor = mock("PlaidEntry::Processor")
+
+    PlaidEntry::Processor.expects(:new).returns(mock_processor)
+    mock_processor.expects(:process).returns(processed_transaction).in_sequence(sequence)
+    Rule.any_instance.expects(:apply).once.in_sequence(sequence)
+
+    PlaidAccount::Transactions::Processor.new(@plaid_account).process
+  end
 end
