@@ -34,6 +34,12 @@ class Period
       label: "Current Month",
       comparison_label: "vs. start of month"
     },
+    "previous_month" => {
+      date_range: -> { [ Date.current.prev_month.beginning_of_month, Date.current.prev_month.end_of_month ] },
+      label_short: "Prev Month",
+      label: "Previous Month",
+      comparison_label: "vs. start of previous month"
+    },
     "last_30_days" => {
       date_range: -> { [ 30.days.ago.to_date, Date.current ] },
       label_short: "30D",

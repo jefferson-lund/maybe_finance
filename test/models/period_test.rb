@@ -29,6 +29,16 @@ class PeriodTest < ActiveSupport::TestCase
     assert_equal Date.current, period.end_date
   end
 
+  test "previous month covers the full prior calendar month" do
+    travel_to Date.new(2026, 8, 26) do
+      period = Period.previous_month
+
+      assert_equal Date.new(2026, 7, 1), period.start_date
+      assert_equal Date.new(2026, 7, 31), period.end_date
+      assert_equal "Previous Month", period.label
+    end
+  end
+
   test "from_key with invalid key and no fallback raises error" do
     error = assert_raises(Period::InvalidKeyError) do
       Period.from_key("invalid_key")
