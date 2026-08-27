@@ -1,0 +1,12 @@
+<%# locals: (security:, size: "md") %>
+
+<% size_classes = {
+  "sm" => "w-6 h-6",
+  "md" => "w-9 h-9"
+} %>
+
+<% if security.logo_url.present? %>
+  <%= image_tag security.logo_url, class: "shrink-0 rounded-full #{size_classes.fetch(size)}", loading: "lazy" %>
+<% else %>
+  <%= render DS::FilledIcon.new(variant: :text, text: security.ticker, size: size, rounded: true) %>
+<% end %>

@@ -35,10 +35,8 @@ class Family::AutoMerchantDetector
         ai_provider_merchant = ProviderMerchant.find_or_create_by!(
           source: "ai",
           name: auto_detection.business_name,
-          website_url: auto_detection.business_url,
-        ) do |pm|
-          pm.logo_url = "#{default_logo_provider_url}/#{auto_detection.business_url}"
-        end
+          website_url: auto_detection.business_url
+        )
       end
 
       merchant_id = merchant_id || ai_provider_merchant&.id
@@ -63,10 +61,6 @@ class Family::AutoMerchantDetector
     # For now, OpenAI only, but this should work with any LLM concept provider
     def llm_provider
       Provider::Registry.get_provider(:openai)
-    end
-
-    def default_logo_provider_url
-      "https://logo.synthfinance.com"
     end
 
     def user_merchants_input

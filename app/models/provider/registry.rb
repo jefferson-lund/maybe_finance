@@ -3,7 +3,7 @@ class Provider::Registry
 
   Error = Class.new(StandardError)
 
-  CONCEPTS = %i[exchange_rates securities llm]
+  CONCEPTS = %i[llm]
 
   validates :concept, inclusion: { in: CONCEPTS }
 
@@ -30,14 +30,6 @@ class Provider::Registry
         return nil unless secret_key.present? && webhook_secret.present?
 
         Provider::Stripe.new(secret_key:, webhook_secret:)
-      end
-
-      def synth
-        api_key = ENV.fetch("SYNTH_API_KEY", Setting.synth_api_key)
-
-        return nil unless api_key.present?
-
-        Provider::Synth.new(api_key)
       end
 
       def plaid_us
@@ -91,14 +83,10 @@ class Provider::Registry
 
     def available_providers
       case concept
-      when :exchange_rates
-        %i[synth]
-      when :securities
-        %i[synth]
       when :llm
         %i[openai]
       else
-        %i[synth plaid_us plaid_eu github openai]
+        %i[plaid_us plaid_eu github openai]
       end
     end
 end

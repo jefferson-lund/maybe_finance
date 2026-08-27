@@ -7,8 +7,12 @@
   "full" => "w-full h-full"
 } %>
 
-<% if account.plaid_account_id? && account.institution_domain.present? %>
-  <%= image_tag "https://logo.synthfinance.com/#{account.institution_domain}", class: "shrink-0 rounded-full #{size_classes[size]}" %>
+<% if account.plaid_account&.plaid_item&.logo&.attached? %>
+  <%= image_tag account.plaid_account.plaid_item.logo, class: "shrink-0 rounded-full #{size_classes[size]}" %>
+<% elsif account.institution_domain.present? %>
+  <%= image_tag "https://www.google.com/s2/favicons?domain=#{url_encode(account.institution_domain)}&sz=128",
+                class: "shrink-0 rounded-full #{size_classes[size]}",
+                loading: "lazy" %>
 <% elsif account.logo.attached? %>
   <%= image_tag account.logo, class: "shrink-0 rounded-full #{size_classes[size]}" %>
 <% else %>

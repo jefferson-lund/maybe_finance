@@ -152,23 +152,22 @@ Each "concept" has an interface defined in the `app/models/provider/concepts` di
 ```
 app/models/
   exchange_rate/
-    provided.rb # <- Responsible for selecting the concept provider from the registry
+    provided.rb # <- Returns cached rates; no external provider is configured
   provider.rb # <- Base provider class
   provider/
     registry.rb <- Defines available providers by concept
     concepts/
       exchange_rate.rb <- defines the interface required for the exchange rate concept
-    synth.rb # <- Concrete provider implementation
 ```
 
 ### One-off data
 
-For data that does not fit neatly into a "concept", an interface is not required and the concrete provider may implement ad-hoc methods called directly in code.  For example, the [synth.rb](mdc:app/models/provider/synth.rb) provider has a `usage` method that is only applicable to this specific provider.  This should be called directly without any abstractions:
+For data that does not fit neatly into a "concept", an interface is not required and the concrete provider may implement ad-hoc methods called directly in code.
 
 ```rb
 class SomeModel < Application
-  def synth_usage
-    Provider::Registry.get_provider(:synth)&.usage
+  def provider_data
+    Provider::Registry.get_provider(:provider_name)&.fetch_data
   end
 end
 ```
@@ -188,8 +187,7 @@ module ExchangeRate::Provided
 
   class_methods do
     def provider
-      registry = Provider::Registry.for_concept(:exchange_rates)
-      registry.get_provider(:synth)
+      nil
     end
 
     def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)

@@ -19,7 +19,7 @@ This rule serves as high-level documentation for how you should write code for t
 - External
   - Payments: Stripe
   - User bank data syncing: Plaid 
-  - Market data: Synth (our custom API)
+  - Market data: no external provider; use imported or manually entered data
 
 ## Project conventions
 

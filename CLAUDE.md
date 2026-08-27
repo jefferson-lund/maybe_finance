@@ -115,7 +115,7 @@ Sidekiq handles asynchronous tasks:
 
 ### Multi-Currency Support
 - All monetary values stored in base currency (user's primary currency)
-- Exchange rates fetched from Synth API
+- Exchange rates are used when available
 - `Money` objects handle currency conversion and formatting
 - Historical exchange rates for accurate reporting
 

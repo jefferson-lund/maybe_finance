@@ -15,10 +15,8 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     Security.delete_all
 
     @provider = mock("provider")
-    Provider::Registry.any_instance
-                      .stubs(:get_provider)
-                      .with(:synth)
-                      .returns(@provider)
+    Security.stubs(:provider).returns(@provider)
+    ExchangeRate.stubs(:provider).returns(@provider)
   end
 
   test "syncs required exchange rates" do

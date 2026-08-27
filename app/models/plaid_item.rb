@@ -1,3 +1,6 @@
+require "base64"
+require "stringio"
+
 class PlaidItem < ApplicationRecord
   include Syncable, Provided
 
@@ -91,6 +94,7 @@ class PlaidItem < ApplicationRecord
     )
 
     save!
+    attach_institution_logo(institution_snapshot.logo)
   end
 
   def supports_product?(product)
@@ -98,6 +102,18 @@ class PlaidItem < ApplicationRecord
   end
 
   private
+    def attach_institution_logo(encoded_logo)
+      return if logo.attached? || encoded_logo.blank?
+
+      logo.attach(
+        io: StringIO.new(Base64.strict_decode64(encoded_logo)),
+        filename: "#{institution_id}.png",
+        content_type: "image/png"
+      )
+    rescue ArgumentError => error
+      Rails.logger.warn("Could not decode Plaid institution logo for #{institution_id}: #{error.message}")
+    end
+
     def remove_plaid_item
       plaid_provider.remove_item(access_token)
     rescue Plaid::ApiError => e

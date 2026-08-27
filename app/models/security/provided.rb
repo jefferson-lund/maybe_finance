@@ -5,8 +5,7 @@ module Security::Provided
 
   class_methods do
     def provider
-      registry = Provider::Registry.for_concept(:securities)
-      registry.get_provider(:synth)
+      nil
     end
 
     def search_provider(symbol, country_code: nil, exchange_operating_mic: nil)
@@ -62,10 +61,7 @@ module Security::Provided
   end
 
   def import_provider_details(clear_cache: false)
-    unless provider.present?
-      Rails.logger.warn("No provider configured for Security.import_provider_details")
-      return
-    end
+    return unless provider.present?
 
     if self.name.present? && self.logo_url.present? && !clear_cache
       return
@@ -91,10 +87,7 @@ module Security::Provided
   end
 
   def import_provider_prices(start_date:, end_date:, clear_cache: false)
-    unless provider.present?
-      Rails.logger.warn("No provider configured for Security.import_provider_prices")
-      return 0
-    end
+    return 0 unless provider.present?
 
     Security::Price::Importer.new(
       security: self,
