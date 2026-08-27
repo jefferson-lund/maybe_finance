@@ -152,6 +152,16 @@ Verification:
 - Brakeman: no new warnings.
 - Exercised end-to-end against a disposable local Docker instance seeded with demo data.
 
+## Increment 9 — Transactions list TODOs (2026-08-27)
+
+Captured from the live transactions page. Implementation is not in this increment.
+
+- Show the category control on every row at the same breakpoint as the Category header, and keep recategorize to one click on that control.
+- Truncate long bank/Plaid transaction names so they cannot overflow the row.
+- Relabel Auto-matched as a pending transfer match, not category approval. Every non-transfer row should still show a category, including Uncategorized.
+
+See [TODO.md](TODO.md).
+
 ## Scope this loop will not touch
 
 - Cloudflare token rotation (operator dashboard)
