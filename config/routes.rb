@@ -92,6 +92,7 @@ Rails.application.routes.draw do
     get :picker, on: :collection
 
     resources :budget_categories, only: %i[index show update]
+    resources :budget_allocations, only: :update
   end
 
   resources :family_merchants, only: %i[index new create edit update destroy]

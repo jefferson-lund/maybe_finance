@@ -39,10 +39,11 @@
   <% end %>
 
   <div class="ml-auto">
+    <% shortcut_date = budget.current? ? Date.current.prev_month : Date.current %>
     <%= render DS::Link.new(
-        text: "Today",
+        text: budget.current? ? "Previous month" : "Current month",
         variant: "outline",
-        href: budget_path(Budget.date_to_param(Date.current)),
+        href: budget_path(Budget.date_to_param(shortcut_date)),
     ) %>
   </div>
 </div>

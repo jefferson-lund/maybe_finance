@@ -13,6 +13,7 @@ class Category < ApplicationRecord
 
   validate :category_level_limit
   validate :nested_category_matches_parent_classification
+  validate :budget_bucket_only_for_expenses
 
   before_save :inherit_color_from_parent
 
@@ -20,6 +21,8 @@ class Category < ApplicationRecord
   scope :roots, -> { where(parent_id: nil) }
   scope :incomes, -> { where(classification: "income") }
   scope :expenses, -> { where(classification: "expense") }
+
+  enum :budget_bucket, { needs: "needs", wants: "wants" }, prefix: :budget, validate: { allow_nil: true }
 
   COLORS = %w[#e99537 #4da568 #6471eb #db5a54 #df4e92 #c44fe9 #eb5429 #61c9ea #805dee #6ad28a]
 
@@ -51,11 +54,12 @@ class Category < ApplicationRecord
     end
 
     def bootstrap!
-      default_categories.each do |name, color, icon, classification|
+      default_categories.each do |name, color, icon, classification, budget_bucket|
         find_or_create_by!(name: name) do |category|
           category.color = color
           category.classification = classification
           category.lucide_icon = icon
+          category.budget_bucket = budget_bucket
         end
       end
     end
@@ -71,20 +75,20 @@ class Category < ApplicationRecord
     private
       def default_categories
         [
-          [ "Income", "#e99537", "circle-dollar-sign", "income" ],
-          [ "Loan Payments", "#6471eb", "credit-card", "expense" ],
-          [ "Fees", "#6471eb", "credit-card", "expense" ],
-          [ "Entertainment", "#df4e92", "drama", "expense" ],
-          [ "Food & Drink", "#eb5429", "utensils", "expense" ],
-          [ "Shopping", "#e99537", "shopping-cart", "expense" ],
-          [ "Home Improvement", "#6471eb", "house", "expense" ],
-          [ "Healthcare", "#4da568", "pill", "expense" ],
-          [ "Personal Care", "#4da568", "pill", "expense" ],
-          [ "Services", "#4da568", "briefcase", "expense" ],
-          [ "Gifts & Donations", "#61c9ea", "hand-helping", "expense" ],
-          [ "Transportation", "#df4e92", "bus", "expense" ],
-          [ "Travel", "#df4e92", "plane", "expense" ],
-          [ "Rent & Utilities", "#db5a54", "lightbulb", "expense" ]
+          [ "Income", "#e99537", "circle-dollar-sign", "income", nil ],
+          [ "Loan Payments", "#6471eb", "credit-card", "expense", "needs" ],
+          [ "Fees", "#6471eb", "credit-card", "expense", "needs" ],
+          [ "Entertainment", "#df4e92", "drama", "expense", "wants" ],
+          [ "Food & Drink", "#eb5429", "utensils", "expense", "needs" ],
+          [ "Shopping", "#e99537", "shopping-cart", "expense", "wants" ],
+          [ "Home Improvement", "#6471eb", "house", "expense", "wants" ],
+          [ "Healthcare", "#4da568", "pill", "expense", "needs" ],
+          [ "Personal Care", "#4da568", "pill", "expense", "wants" ],
+          [ "Services", "#4da568", "briefcase", "expense", "wants" ],
+          [ "Gifts & Donations", "#61c9ea", "hand-helping", "expense", "wants" ],
+          [ "Transportation", "#df4e92", "bus", "expense", "needs" ],
+          [ "Travel", "#df4e92", "plane", "expense", "wants" ],
+          [ "Rent & Utilities", "#db5a54", "lightbulb", "expense", "needs" ]
         ]
       end
   end
@@ -110,6 +114,10 @@ class Category < ApplicationRecord
     parent.present?
   end
 
+  def effective_budget_bucket
+    budget_bucket || parent&.effective_budget_bucket
+  end
+
   private
     def category_level_limit
       if (subcategory? && parent.subcategory?) || (parent? && subcategory?)
@@ -121,6 +129,10 @@ class Category < ApplicationRecord
       if subcategory? && parent.classification != classification
         errors.add(:parent, "must have the same classification as its parent")
       end
+    end
+
+    def budget_bucket_only_for_expenses
+      errors.add(:budget_bucket, "is only available for expense categories") if budget_bucket.present? && classification != "expense"
     end
 
     def monetizable_currency

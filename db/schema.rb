@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_07_24_115507) do
+ActiveRecord::Schema[7.2].define(version: 2026_08_27_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -134,6 +134,26 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_24_115507) do
     t.index ["account_id"], name: "index_balances_on_account_id"
   end
 
+  create_table "budget_allocations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "budget_id", null: false
+    t.uuid "source_category_id"
+    t.uuid "destination_category_id"
+    t.uuid "destination_account_id"
+    t.string "name", null: false
+    t.string "basis", null: false
+    t.decimal "percentage", precision: 5, scale: 2, null: false
+    t.integer "month_offset", default: 0, null: false
+    t.boolean "reduces_remaining", default: true, null: false
+    t.integer "position", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["budget_id", "position"], name: "index_budget_allocations_on_budget_id_and_position", unique: true
+    t.index ["budget_id"], name: "index_budget_allocations_on_budget_id"
+    t.index ["destination_account_id"], name: "index_budget_allocations_on_destination_account_id"
+    t.index ["destination_category_id"], name: "index_budget_allocations_on_destination_category_id"
+    t.index ["source_category_id"], name: "index_budget_allocations_on_source_category_id"
+  end
+
   create_table "budget_categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "budget_id", null: false
     t.uuid "category_id", null: false
@@ -168,6 +188,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_24_115507) do
     t.uuid "parent_id"
     t.string "classification", default: "expense", null: false
     t.string "lucide_icon", default: "shapes", null: false
+    t.string "budget_bucket"
     t.index ["family_id"], name: "index_categories_on_family_id"
   end
 
@@ -831,6 +852,10 @@ ActiveRecord::Schema[7.2].define(version: 2025_07_24_115507) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "api_keys", "users"
   add_foreign_key "balances", "accounts", on_delete: :cascade
+  add_foreign_key "budget_allocations", "accounts", column: "destination_account_id", on_delete: :nullify
+  add_foreign_key "budget_allocations", "budgets"
+  add_foreign_key "budget_allocations", "categories", column: "destination_category_id", on_delete: :nullify
+  add_foreign_key "budget_allocations", "categories", column: "source_category_id", on_delete: :nullify
   add_foreign_key "budget_categories", "budgets"
   add_foreign_key "budget_categories", "categories"
   add_foreign_key "budgets", "families"

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BudgetTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @family = families(:empty)
   end
@@ -84,5 +86,42 @@ class BudgetTest < ActiveSupport::TestCase
     )
 
     assert_not_nil budget.previous_budget_param
+  end
+
+  test "calculates 50 30 20 actuals from categorized transactions" do
+    account = @family.accounts.create!(
+      name: "Budget checking",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    income = @family.categories.create!(name: "Pay", classification: "income")
+    needs = @family.categories.create!(name: "Housing", budget_bucket: "needs")
+    wants = @family.categories.create!(name: "Dining", budget_bucket: "wants")
+
+    create_transaction(account:, date: Date.current, amount: -1000, category: income)
+    create_transaction(account:, date: Date.current, amount: 400, category: needs)
+    create_transaction(account:, date: Date.current, amount: 200, category: wants)
+    create_transaction(account:, date: Date.current, amount: 50)
+
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current)
+
+    assert_equal 400, budget.needs_spending
+    assert_equal 200, budget.wants_spending
+    assert_equal 50, budget.unassigned_spending
+    assert_equal 350, budget.residual_savings
+    assert_in_delta 40, budget.needs_percent
+    assert_in_delta 20, budget.wants_percent
+    assert_in_delta 35, budget.savings_percent
+  end
+
+  test "copies allocation rules from the previous month" do
+    previous_budget = Budget.find_or_bootstrap(@family, start_date: 1.month.ago)
+    previous_budget.budget_allocations.first.update!(percentage: 12)
+
+    current_budget = Budget.find_or_bootstrap(@family, start_date: Date.current)
+
+    assert_equal previous_budget.budget_allocations.count, current_budget.budget_allocations.count
+    assert_equal 12, current_budget.budget_allocations.first.percentage
   end
 end

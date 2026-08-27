@@ -1,0 +1,41 @@
+<%# locals: (budget:, allocation:) %>
+
+<%= styled_form_with model: [budget, allocation], class: "rounded-xl border border-secondary p-4 space-y-3" do |f| %>
+  <div class="flex items-center justify-between gap-3">
+    <%= f.text_field :name, label: "Allocation name", required: true %>
+    <div class="w-28 shrink-0">
+      <%= f.number_field :percentage, label: "Percent", min: 0.01, max: 100, step: 0.01, required: true %>
+    </div>
+  </div>
+
+  <%= f.select :basis,
+               [["All income", "gross_income"], ["Selected income category and its subcategories", "selected_income"], ["Remaining cash", "remaining_cash"]],
+               { label: "Calculate from" },
+               required: true %>
+
+  <%= f.select :source_category_id,
+               budget.family.categories.incomes.alphabetically.pluck(:name, :id),
+               { include_blank: "Not selected", label: "Eligible income category (for selected-income rules)" } %>
+
+  <div class="grid gap-3 sm:grid-cols-2">
+    <%= f.select :destination_category_id,
+                 budget.family.categories.expenses.alphabetically.pluck(:name, :id),
+                 { include_blank: "No expense category", label: "Track actual by category" } %>
+    <%= f.select :destination_account_id,
+                 budget.family.accounts.visible.alphabetically.pluck(:name, :id),
+                 { include_blank: "No destination account", label: "Track actual by account transfer" } %>
+  </div>
+
+  <div class="grid gap-3 sm:grid-cols-2">
+    <%= f.number_field :month_offset, label: "Actual month offset", min: 0, max: 12, step: 1, required: true %>
+    <div class="flex items-center gap-2 pt-7">
+      <%= f.check_box :reduces_remaining, class: "checkbox checkbox--light" %>
+      <%= f.label :reduces_remaining, "Subtract before fun-money split", class: "text-sm text-secondary" %>
+    </div>
+  </div>
+
+  <p class="text-xs text-secondary">
+    Selected income includes the chosen income category and its subcategories. Choose either a category or an account to compare the target with actual activity.
+  </p>
+  <%= f.submit "Save allocation" %>
+<% end %>

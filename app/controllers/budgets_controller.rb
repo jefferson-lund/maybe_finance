@@ -2,7 +2,7 @@ class BudgetsController < ApplicationController
   before_action :set_budget, only: %i[show edit update]
 
   def index
-    redirect_to_current_month_budget
+    redirect_to_previous_month_budget
   end
 
   def show
@@ -40,8 +40,8 @@ class BudgetsController < ApplicationController
       raise ActiveRecord::RecordNotFound unless @budget
     end
 
-    def redirect_to_current_month_budget
-      current_budget = Budget.find_or_bootstrap(Current.family, start_date: Date.current)
-      redirect_to budget_path(current_budget)
+    def redirect_to_previous_month_budget
+      previous_month_budget = Budget.find_or_bootstrap(Current.family, start_date: Period.previous_month.start_date)
+      redirect_to budget_path(previous_month_budget)
     end
 end

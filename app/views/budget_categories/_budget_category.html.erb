@@ -24,7 +24,14 @@
     <% end %>
 
     <div>
-      <p class="text-sm font-medium text-primary"><%= budget_category.category.name %></p>
+      <div class="flex items-center gap-2">
+        <p class="text-sm font-medium text-primary"><%= budget_category.category.name %></p>
+        <% if budget_category.category.effective_budget_bucket.present? %>
+          <span class="rounded-full bg-container-inset px-2 py-0.5 text-xs text-secondary">
+            <%= budget_category.category.effective_budget_bucket.humanize %>
+          </span>
+        <% end %>
+      </div>
 
       <% if budget_category.initialized? %>
         <% if budget_category.available_to_spend.negative? %>

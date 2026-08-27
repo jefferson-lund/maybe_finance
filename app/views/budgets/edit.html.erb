@@ -43,5 +43,20 @@
         <%= f.submit "Continue" %>
       <% end %>
     </div>
+
+    <section id="allocation-rules" class="mx-auto max-w-2xl pt-8 space-y-4">
+      <div class="text-center space-y-2">
+        <h2 class="text-2xl text-primary font-medium">Household allocation rules</h2>
+        <p class="text-secondary text-sm">
+          These editable rules mirror your workbook. They calculate targets and compare them with categorized expenses or transfers, but never move money.
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        <% @budget.budget_allocations.each do |allocation| %>
+          <%= render "budget_allocations/form", budget: @budget, allocation: allocation %>
+        <% end %>
+      </div>
+    </section>
   </div>
 </div>

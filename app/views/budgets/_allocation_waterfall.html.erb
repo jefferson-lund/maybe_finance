@@ -1,0 +1,54 @@
+<%# locals: (budget:) %>
+
+<section class="mb-6 rounded-xl bg-container p-4 shadow-border-xs">
+  <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h2 class="text-lg font-medium text-primary">Household allocation waterfall</h2>
+      <p class="text-sm text-secondary">Workbook-style targets compared with categorized expenses and account transfers.</p>
+    </div>
+    <%= render DS::Link.new(
+      text: "Configure",
+      variant: "secondary",
+      icon: "settings-2",
+      href: edit_budget_path(budget, anchor: "allocation-rules")
+    ) %>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full min-w-[640px] text-sm">
+      <thead>
+        <tr class="border-b border-secondary text-left text-xs uppercase text-secondary">
+          <th scope="col" class="px-3 py-2 font-medium">Allocation</th>
+          <th scope="col" class="px-3 py-2 font-medium">Destination</th>
+          <th scope="col" class="px-3 py-2 text-right font-medium">Target</th>
+          <th scope="col" class="px-3 py-2 text-right font-medium">Actual</th>
+          <th scope="col" class="px-3 py-2 text-right font-medium">Variance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% budget.allocation_rows.each do |row| %>
+          <tr class="border-b border-secondary last:border-b-0">
+            <td class="px-3 py-3">
+              <p class="font-medium text-primary"><%= row.allocation.name %></p>
+              <p class="text-xs text-secondary">
+                <%= number_to_percentage(row.allocation.percentage, precision: 0) %>
+                of <%= row.allocation.basis_name %>
+                <%= "· actuals shifted #{row.allocation.month_offset} month" if row.allocation.month_offset.positive? %>
+              </p>
+            </td>
+            <td class="px-3 py-3 text-secondary"><%= row.allocation.destination_name %></td>
+            <td class="px-3 py-3 text-right font-medium text-primary">
+              <%= format_money(Money.new(row.target, budget.currency)) %>
+            </td>
+            <td class="px-3 py-3 text-right font-medium text-primary">
+              <%= format_money(Money.new(row.actual, budget.currency)) %>
+            </td>
+            <td class="px-3 py-3 text-right font-medium <%= row.variance.negative? ? "text-destructive" : "text-primary" %>">
+              <%= format_money(Money.new(row.variance, budget.currency)) %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</section>

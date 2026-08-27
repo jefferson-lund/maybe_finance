@@ -6,6 +6,7 @@ class Budget < ApplicationRecord
   belongs_to :family
 
   has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
+  has_many :budget_allocations, -> { ordered }, dependent: :destroy
 
   validates :start_date, :end_date, presence: true
   validates :start_date, :end_date, uniqueness: { scope: :family_id }
@@ -13,6 +14,8 @@ class Budget < ApplicationRecord
   monetize :budgeted_spending, :expected_income, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
            :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income
+  monetize :needs_spending, :wants_spending, :unassigned_spending, :residual_savings,
+           :needs_target, :wants_target, :savings_target
 
   class << self
     def date_to_param(date)
@@ -42,6 +45,7 @@ class Budget < ApplicationRecord
         end
 
         budget.sync_budget_categories
+        budget.bootstrap_allocations
 
         budget
       end
@@ -81,6 +85,29 @@ class Budget < ApplicationRecord
 
     # Remove old categories
     budget_categories.where(category_id: categories_to_remove).destroy_all if categories_to_remove.any?
+  end
+
+  def bootstrap_allocations
+    return if budget_allocations.exists?
+
+    previous_allocations = family.budgets
+                                 .where(start_date: ...start_date)
+                                 .order(start_date: :desc)
+                                 .find { |candidate| candidate.budget_allocations.exists? }
+                                 &.budget_allocations
+
+    if previous_allocations.present?
+      previous_allocations.each do |allocation|
+        budget_allocations.create!(
+          allocation.attributes.slice(
+            "name", "basis", "percentage", "month_offset", "reduces_remaining", "position",
+            "source_category_id", "destination_category_id", "destination_account_id"
+          )
+        )
+      end
+    else
+      create_default_allocations
+    end
   end
 
   def uncategorized_budget_category
@@ -156,6 +183,50 @@ class Budget < ApplicationRecord
 
   def actual_spending
     expense_totals.total
+  end
+
+  def needs_spending
+    spending_by_bucket.fetch("needs", 0)
+  end
+
+  def wants_spending
+    spending_by_bucket.fetch("wants", 0)
+  end
+
+  def unassigned_spending
+    spending_by_bucket.fetch(nil, 0)
+  end
+
+  def residual_savings
+    actual_income - actual_spending
+  end
+
+  def needs_target
+    actual_income * 0.5
+  end
+
+  def wants_target
+    actual_income * 0.3
+  end
+
+  def savings_target
+    actual_income * 0.2
+  end
+
+  def needs_percent
+    percent_of_income(needs_spending)
+  end
+
+  def wants_percent
+    percent_of_income(wants_spending)
+  end
+
+  def savings_percent
+    percent_of_income(residual_savings)
+  end
+
+  def allocation_rows
+    Budget::AllocationCalculator.new(self).rows
   end
 
   def budget_category_actual_spending(budget_category)
@@ -235,6 +306,48 @@ class Budget < ApplicationRecord
   end
 
   private
+    def create_default_allocations
+      tithing_category = family.categories.expenses.find_by(name: "Gifts & Donations")
+
+      budget_allocations.create!([
+        { name: "Next Month's Tithing", basis: "gross_income", percentage: 10, month_offset: 1,
+          reduces_remaining: false, position: 1, destination_category: tithing_category },
+        { name: "Schwab IRA", basis: "selected_income", percentage: 10, reduces_remaining: true, position: 2 },
+        { name: "LTS", basis: "gross_income", percentage: 10, reduces_remaining: true, position: 3 },
+        { name: "Individual Fun Money 1", basis: "remaining_cash", percentage: 50, reduces_remaining: true, position: 4 },
+        { name: "Individual Fun Money 2", basis: "remaining_cash", percentage: 50, reduces_remaining: true, position: 5 }
+      ])
+    end
+
+    def spending_by_bucket
+      @spending_by_bucket ||= begin
+        totals = Hash.new(0)
+
+        budget_expense_transactions.each do |transaction|
+          totals[transaction.category&.effective_budget_bucket] += converted_amount(transaction.entry).abs
+        end
+
+        totals
+      end
+    end
+
+    def budget_expense_transactions
+      family.transactions.visible.in_period(period)
+            .where.not(kind: %w[funds_movement one_time cc_payment])
+            .includes({ category: :parent }, :entry)
+            .select { |transaction| transaction.entry.amount.positive? }
+    end
+
+    def converted_amount(entry)
+      entry.amount_money.exchange_to(family.currency, date: entry.date, fallback_rate: 1).amount
+    end
+
+    def percent_of_income(amount)
+      return nil unless actual_income.positive?
+
+      amount / actual_income.to_f * 100
+    end
+
     def income_statement
       @income_statement ||= family.income_statement
     end
