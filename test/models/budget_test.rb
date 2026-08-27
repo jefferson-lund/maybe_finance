@@ -109,7 +109,7 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 400, budget.needs_spending
     assert_equal 200, budget.wants_spending
     assert_equal 50, budget.unassigned_spending
-    assert_equal 350, budget.residual_savings
+    assert_equal 350, budget.monthly_savings
     assert_in_delta 40, budget.needs_percent
     assert_in_delta 20, budget.wants_percent
     assert_in_delta 35, budget.savings_percent

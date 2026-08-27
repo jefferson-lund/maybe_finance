@@ -140,7 +140,7 @@ Deferred with rationale: upgrading Rails and Brakeman is a repository-wide depen
 
 ## Increment 8 — Household budgeting (2026-08-27)
 
-Modeled the household budget workbook inside the app instead of a spreadsheet. Budgets open on the complete previous calendar month, expense categories carry a `needs`/`wants` bucket that subcategories inherit, and savings is the residual of actual income minus actual spending so the 50/30/20 panel never double-counts transfers.
+Modeled the household budget workbook inside the app instead of a spreadsheet. Budgets open on the complete previous calendar month, expense categories carry a `needs`/`wants` bucket that subcategories inherit, and monthly savings is the selected month's actual income minus its actual spending so the 50/30/20 panel never presents savings as an account balance or double-counts transfers.
 
 `BudgetAllocation` records the workbook's percentage waterfall (next month's tithing, Schwab IRA, LTS, two fun-money envelopes). Rules are editable and prefilled from workbook defaults, copied forward from the prior month when a budget is bootstrapped. Targets may draw from all income, one selected income category and its subcategories, or remaining cash; actuals come from categorized expenses or `funds_movement` inflows into a destination account, with an optional month offset for accrual-style rules like tithing. Allocations are planning-only: they compute targets and compare them with existing activity, and never create entries or move money.
 

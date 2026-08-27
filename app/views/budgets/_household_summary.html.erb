@@ -11,24 +11,24 @@
       <p class="mt-1 text-2xl font-medium text-primary"><%= format_money(budget.actual_spending_money) %></p>
     </div>
     <div class="rounded-xl bg-container p-4 shadow-border-xs">
-      <p class="text-sm text-secondary">Residual savings</p>
-      <p class="mt-1 text-2xl font-medium <%= budget.residual_savings.negative? ? "text-destructive" : "text-primary" %>">
-        <%= format_money(budget.residual_savings_money) %>
+      <p class="text-sm text-secondary">Saved this month</p>
+      <p class="mt-1 text-2xl font-medium <%= budget.monthly_savings.negative? ? "text-destructive" : "text-primary" %>">
+        <%= format_money(budget.monthly_savings_money) %>
       </p>
-      <p class="mt-1 text-xs text-secondary">Income minus all expenses</p>
+      <p class="mt-1 text-xs text-secondary">This month’s income minus this month’s expenses</p>
     </div>
   </div>
 
   <div class="rounded-xl bg-container p-4 shadow-border-xs">
     <div class="mb-4">
       <h2 class="text-lg font-medium text-primary">50 / 30 / 20</h2>
-      <p class="text-sm text-secondary">Actual household spending compared with your income-based targets.</p>
+      <p class="text-sm text-secondary">How this month’s income was divided among needs, wants, and savings.</p>
     </div>
 
     <% buckets = [
       { name: "Needs", target_percent: 50, actual: budget.needs_spending, actual_money: budget.needs_spending_money, target_money: budget.needs_target_money, percent: budget.needs_percent, bar: "bg-blue-500" },
       { name: "Wants", target_percent: 30, actual: budget.wants_spending, actual_money: budget.wants_spending_money, target_money: budget.wants_target_money, percent: budget.wants_percent, bar: "bg-pink-500" },
-      { name: "Savings", target_percent: 20, actual: budget.residual_savings, actual_money: budget.residual_savings_money, target_money: budget.savings_target_money, percent: budget.savings_percent, bar: "bg-green-500" }
+      { name: "Savings", target_percent: 20, actual: budget.monthly_savings, actual_money: budget.monthly_savings_money, target_money: budget.savings_target_money, percent: budget.savings_percent, bar: "bg-green-500" }
     ] %>
 
     <div class="grid gap-4 lg:grid-cols-3">
@@ -38,7 +38,7 @@
           <div class="flex items-start justify-between gap-3">
             <div>
               <h3 class="font-medium text-primary"><%= bucket[:name] %></h3>
-              <p class="text-xs text-secondary">Target <%= bucket[:target_percent] %>% · <%= format_money(bucket[:target_money]) %></p>
+              <p class="text-xs text-secondary">Target <%= bucket[:target_percent] %>% of this month’s income · <%= format_money(bucket[:target_money]) %></p>
             </div>
             <p class="text-sm font-medium text-primary">
               <%= bucket[:percent] ? number_to_percentage(bucket[:percent], precision: 1) : "—" %>

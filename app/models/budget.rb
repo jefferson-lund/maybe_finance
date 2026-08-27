@@ -14,7 +14,7 @@ class Budget < ApplicationRecord
   monetize :budgeted_spending, :expected_income, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
            :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income
-  monetize :needs_spending, :wants_spending, :unassigned_spending, :residual_savings,
+  monetize :needs_spending, :wants_spending, :unassigned_spending, :monthly_savings,
            :needs_target, :wants_target, :savings_target
 
   class << self
@@ -197,7 +197,7 @@ class Budget < ApplicationRecord
     spending_by_bucket.fetch(nil, 0)
   end
 
-  def residual_savings
+  def monthly_savings
     actual_income - actual_spending
   end
 
@@ -222,7 +222,7 @@ class Budget < ApplicationRecord
   end
 
   def savings_percent
-    percent_of_income(residual_savings)
+    percent_of_income(monthly_savings)
   end
 
   def allocation_rows
