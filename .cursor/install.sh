@@ -42,6 +42,11 @@ npm install
 echo "== Preparing database =="
 bin/rails db:prepare
 
+# Build Tailwind CSS so app/assets/builds/tailwind.css exists in the baseline.
+# Without it, Propshaft raises MissingAssetError before the runtime build runs.
+echo "== Building Tailwind CSS =="
+bin/rails tailwindcss:build || true
+
 echo "== Clearing logs and tempfiles =="
 bin/rails log:clear tmp:clear || true
 
