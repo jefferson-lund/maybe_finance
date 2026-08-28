@@ -200,17 +200,22 @@ end
     long_name = "POS PURCHASE AMAZON MARKETPLACE WWW AMAZON COM AMZN.COM/BILL WA #{'X' * 40}"
     uncategorized = create_transaction(account: checking, name: long_name, amount: 42, date: Date.current)
 
-    create_transaction(account: checking, name: "To savings", amount: 50, date: 1.day.ago.to_date)
-    create_transaction(account: savings, name: "From checking", amount: -50, date: 1.day.ago.to_date)
+    outflow = create_transaction(account: checking, name: "To savings", amount: 50, date: 1.day.ago.to_date)
+    inflow = create_transaction(account: savings, name: "From checking", amount: -50, date: 1.day.ago.to_date)
     family.auto_match_transfers!
+    pending = Transfer.find_by!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction)
+    assert pending.pending?
 
     get transactions_url
     assert_response :success
 
     assert_includes response.body, "hidden md:flex"
-    assert_select "[id=?]", dom_id(uncategorized.transaction, "category_menu"), text: /Uncategorized/
+    assert_includes response.body, "Uncategorized"
+    assert_includes response.body, "Possible transfer"
+    refute_includes response.body, "Auto-matched"
+    assert_includes response.body, %(id="#{dom_id(uncategorized.transaction, "category_menu")}")
+    assert_includes response.body, %(id="#{dom_id(pending.outflow_transaction, "category_menu")}")
     assert_select "a.truncate[title=?]", long_name
     assert_select "span", text: "Possible transfer"
-    assert_select "span", text: "Auto-matched", count: 0
   end
 end

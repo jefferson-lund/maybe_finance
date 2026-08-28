@@ -1,15 +1,17 @@
 <%# locals: (category:) %>
 <% category ||= Category.uncategorized %>
 
-<div>
-  <span class="flex items-center gap-1 text-sm font-medium rounded-full px-1.5 py-1 border max-w-full truncate focus-visible:outline-none focus-visible:ring-0"
+<div class="min-w-0 max-w-full">
+  <span class="flex items-center gap-1 text-sm font-medium rounded-full px-1.5 py-1 border min-w-0 max-w-full focus-visible:outline-none focus-visible:ring-0"
         style="
           background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
           border-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
           color: <%= category.color %>;">
     <% if category.lucide_icon.present? %>
-      <%= icon category.lucide_icon, size: "sm", color: "current" %>
+      <span class="shrink-0">
+        <%= icon category.lucide_icon, size: "sm", color: "current" %>
+      </span>
     <% end %>
-    <%= category.name %>
+    <span class="truncate min-w-0"><%= category.name %></span>
   </span>
 </div>

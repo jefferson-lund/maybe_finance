@@ -1,6 +1,6 @@
 <%# locals: (transaction:) %>
 
-<div id="<%= dom_id(transaction, "category_menu") %>" class="min-w-0 max-w-full">
+<div id="<%= dom_id(transaction, "category_menu") %>" class="min-w-0 max-w-full overflow-hidden">
   <% if transaction.transfer.nil? || transaction.transfer.pending? || transaction.transfer.categorizable? %>
     <%= render "categories/menu", transaction: transaction %>
   <% else %>
