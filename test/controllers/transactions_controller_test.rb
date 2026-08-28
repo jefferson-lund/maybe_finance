@@ -190,4 +190,27 @@ end
     get transactions_url(q: { categories: [ "Food" ], types: [ "expense" ] })
     assert_response :success
   end
+
+  test "index shows a category on every row, truncates names, and labels pending transfers" do
+    family = families(:empty)
+    sign_in users(:empty)
+    checking = family.accounts.create! name: "Checking", balance: 0, currency: "USD", accountable: Depository.new
+    savings = family.accounts.create! name: "Savings", balance: 0, currency: "USD", accountable: Depository.new
+
+    long_name = "POS PURCHASE AMAZON MARKETPLACE WWW AMAZON COM AMZN.COM/BILL WA #{'X' * 40}"
+    uncategorized = create_transaction(account: checking, name: long_name, amount: 42, date: Date.current)
+
+    create_transaction(account: checking, name: "To savings", amount: 50, date: 1.day.ago.to_date)
+    create_transaction(account: savings, name: "From checking", amount: -50, date: 1.day.ago.to_date)
+    family.auto_match_transfers!
+
+    get transactions_url
+    assert_response :success
+
+    assert_includes response.body, "hidden md:flex"
+    assert_select "[id=?]", dom_id(uncategorized.transaction, "category_menu"), text: /Uncategorized/
+    assert_select "a.truncate[title=?]", long_name
+    assert_select "span", text: "Possible transfer"
+    assert_select "span", text: "Auto-matched", count: 0
+  end
 end

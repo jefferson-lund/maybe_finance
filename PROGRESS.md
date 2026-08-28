@@ -162,6 +162,17 @@ Captured from the live transactions page. Implementation is not in this incremen
 
 See [TODO.md](TODO.md).
 
+## Increment 10 — Transactions list category, names, and transfer match (2026-08-28)
+
+Implemented the Increment 9 list TODOs on the live transactions grid.
+
+- Category column uses the same `md` breakpoint as the Transaction / Category / Amount header. Account activity keeps its Date / Amount / Balance grid and does not show this column.
+- Pending matches still render the category menu (Uncategorized is a real, one-click state). Only confirmed non-loan transfers use the Transfer / Payment badge.
+- Names truncate on a `min-w-0` flex chain with the full string in `title`.
+- Pending transfer chip copy is "Possible transfer"; confirm/reject stay beside it.
+
+See [TODO.md](TODO.md).
+
 ## Scope this loop will not touch
 
 - Cloudflare token rotation (operator dashboard)

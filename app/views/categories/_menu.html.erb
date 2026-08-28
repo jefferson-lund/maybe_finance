@@ -1,7 +1,7 @@
 <%# locals: (transaction:) %>
 
 <%= render DS::Menu.new(variant: "button") do |menu| %>
-  <% menu.with_button do %>
+  <% menu.with_button(class: "min-w-0 max-w-full", title: (transaction.category&.name || "Uncategorized")) do %>
     <% render partial: "categories/badge", locals: { category: transaction.category } %>
   <% end %>
 

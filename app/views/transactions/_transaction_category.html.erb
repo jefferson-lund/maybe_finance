@@ -1,9 +1,9 @@
 <%# locals: (transaction:) %>
 
-<div id="<%= dom_id(transaction, "category_menu") %>">
-  <% if transaction.transfer&.categorizable? || transaction.transfer.nil? %>
+<div id="<%= dom_id(transaction, "category_menu") %>" class="min-w-0 max-w-full">
+  <% if transaction.transfer.nil? || transaction.transfer.pending? || transaction.transfer.categorizable? %>
     <%= render "categories/menu", transaction: transaction %>
   <% else %>
-    <%= render "categories/badge", category: transaction.transfer&.payment? ? payment_category :  transfer_category %>
+    <%= render "categories/badge", category: transaction.transfer&.payment? ? payment_category : transfer_category %>
   <% end %>
 </div>

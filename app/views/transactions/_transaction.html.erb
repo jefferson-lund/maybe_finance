@@ -1,64 +1,67 @@
 <%# locals: (entry:, balance_trend: nil, view_ctx: "global") %>
 
 <% transaction = entry.entryable %>
+<% show_category_column = view_ctx == "global" %>
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
     <div class="grid grid-cols-12 items-center text-primary text-sm font-medium p-4 lg:p-4 <%= entry.excluded ? "opacity-50 text-gray-400" : "" %>">
 
-      <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8">
+      <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
         <%= check_box_tag dom_id(entry, "selection"),
             disabled: transaction.transfer.present?,
-            class: "checkbox checkbox--light",
+            class: "checkbox checkbox--light shrink-0",
             data: {
               id: entry.id,
               "bulk-select-target": "row",
               action: "bulk-select#toggleRowSelection"
             } %>
 
-        <div class="max-w-full">
-          <%= content_tag :div, class: ["flex items-center gap-2"] do %>
+        <div class="min-w-0 flex-1">
+          <%= content_tag :div, class: ["flex items-center gap-2 min-w-0"] do %>
             <% if transaction.merchant&.logo_url.present? %>
               <%= image_tag transaction.merchant.logo_url,
-                  class: "w-6 h-6 rounded-full",
+                  class: "w-6 h-6 rounded-full shrink-0",
                   loading: "lazy" %>
             <% else %>
-              <%= render DS::FilledIcon.new(
-                variant: :text,
-                text: entry.name,
-                size: "sm",
-                rounded: true
-              ) %>
+              <div class="shrink-0">
+                <%= render DS::FilledIcon.new(
+                  variant: :text,
+                  text: entry.name,
+                  size: "sm",
+                  rounded: true
+                ) %>
+              </div>
             <% end %>
 
-            <div class="truncate">
-              <div class="space-y-0.5">
+            <div class="min-w-0 flex-1">
+              <div class="space-y-0.5 min-w-0">
                 <div class="flex items-center gap-1 min-w-0">
-                  <div class="truncate flex-shrink">
-                    <% if transaction.transfer? %>
-                      <%= link_to(
-                            entry.name,
-                            transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry),
-                            data: {
-                              turbo_frame: "drawer",
-                              turbo_prefetch: false
-                            },
-                            class: "hover:underline"
-                          ) %>
-                    <% else %>
-                      <%= link_to(
-                            entry.name,
-                            entry_path(entry),
-                            data: {
-                              turbo_frame: "drawer",
-                              turbo_prefetch: false
-                            },
-                            class: "hover:underline"
-                          ) %>
-                    <% end %>
-                  </div>
+                  <% if transaction.transfer? %>
+                    <%= link_to(
+                          entry.name,
+                          transaction.transfer.present? ? transfer_path(transaction.transfer) : entry_path(entry),
+                          data: {
+                            turbo_frame: "drawer",
+                            turbo_prefetch: false
+                          },
+                          title: entry.name,
+                          class: "hover:underline truncate min-w-0 flex-1"
+                        ) %>
+                  <% else %>
+                    <%= link_to(
+                          entry.name,
+                          entry_path(entry),
+                          data: {
+                            turbo_frame: "drawer",
+                            turbo_prefetch: false
+                          },
+                          title: entry.name,
+                          class: "hover:underline truncate min-w-0 flex-1"
+                        ) %>
+                  <% end %>
 
-                  <div class="flex items-center gap-1 flex-shrink-0">
+                  <div class="flex items-center gap-1 shrink-0">
                     <% if transaction.one_time? %>
                       <span class="text-orange-500" title="One-time <%= entry.amount.negative? ? "income" : "expense" %> (excluded from averages)">
                         <%= icon "asterisk", size: "sm", color: "current" %>
@@ -71,7 +74,7 @@
                   </div>
                 </div>
 
-                <div class="text-secondary text-xs font-normal hidden lg:block">
+                <div class="text-secondary text-xs font-normal hidden lg:block truncate" title="<%= entry.account.name %>">
                   <% if transaction.transfer? %>
                     <span class="text-secondary">
                       <%= transaction.loan_payment? ? "Loan Payment" : "Transfer" %> • <%= entry.account.name %>
@@ -89,11 +92,13 @@
         </div>
       </div>
 
-      <div class="hidden lg:flex items-center gap-1 col-span-2">
-        <%= render "transactions/transaction_category", transaction: transaction %>
-      </div>
+      <% if show_category_column %>
+        <div class="hidden md:flex items-center gap-1 col-span-2 min-w-0">
+          <%= render "transactions/transaction_category", transaction: transaction %>
+        </div>
+      <% end %>
 
-      <div class="col-span-2 ml-auto text-right">
+      <div class="col-span-2 ml-auto text-right shrink-0">
         <%= content_tag :p,
             transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
             class: ["text-green-600": entry.amount.negative?] %>
