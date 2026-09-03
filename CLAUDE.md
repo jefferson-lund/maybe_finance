@@ -51,6 +51,11 @@ Only proceed with pull request creation if ALL checks pass.
 
 ## General Development Rules
 
+### Agent Testing & Demo Behavior
+- Do NOT use the `computerUse` subagent automatically. Only invoke it when the user explicitly requests manual/GUI testing, screenshots, or screen recordings.
+- Default to lightweight evidence (terminal output, logs, automated tests) when verifying changes, including UI changes.
+- Do NOT create screenshots or screen recordings automatically; produce them only on explicit request.
+
 ### Authentication Context
 - Use `Current.user` for the current user. Do NOT use `current_user`.
 - Use `Current.family` for the current family. Do NOT use `current_family`.
