@@ -23,8 +23,19 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
-echo "== Ensuring 'postgres' role password =="
+echo "== Configuring local roles & trust auth =="
+# Password for the default 'postgres' role (used by .env.local below).
 sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';" >/dev/null 2>&1 || true
+# A superuser role matching the OS user so credential-less connections (the
+# app's test environment, which does not load .env.local) also work.
+OS_USER="$(whoami)"
+sudo -u postgres psql -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='${OS_USER}') THEN CREATE ROLE \"${OS_USER}\" LOGIN SUPERUSER; END IF; END \$\$;" >/dev/null 2>&1 || true
+# Trust local (loopback) connections for development convenience.
+PG_HBA="$(sudo -u postgres psql -tAc 'SHOW hba_file;' 2>/dev/null || true)"
+if [ -n "${PG_HBA}" ]; then
+  sudo sed -i -E 's|^(host[[:space:]]+all[[:space:]]+all[[:space:]]+127\.0\.0\.1/32[[:space:]]+)(scram-sha-256|md5|peer|ident)|\1trust|; s|^(host[[:space:]]+all[[:space:]]+all[[:space:]]+::1/128[[:space:]]+)(scram-sha-256|md5|peer|ident)|\1trust|' "${PG_HBA}"
+  sudo pg_ctlcluster "${PG_VER}" main reload 2>/dev/null || sudo service postgresql reload 2>/dev/null || true
+fi
 
 echo "== Writing .env.local (development defaults) =="
 cat > .env.local <<'ENVEOF'
