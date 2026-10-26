@@ -47,6 +47,14 @@ POSTGRES_PASSWORD=postgres
 REDIS_URL=redis://localhost:6379/1
 ENVEOF
 
+echo "== Writing .env.test.local (dummy creds matching CI) =="
+# The test suite builds a Plaid client from these; CI sets the same dummy
+# values (see .github/workflows/ci.yml). Without them, Plaid-backed tests error.
+cat > .env.test.local <<'ENVEOF'
+PLAID_CLIENT_ID=foo
+PLAID_SECRET=bar
+ENVEOF
+
 echo "== Installing Ruby gems =="
 bundle install
 
