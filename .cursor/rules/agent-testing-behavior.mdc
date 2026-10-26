@@ -1,0 +1,11 @@
+---
+description: Controls when agents may use the computerUse subagent and produce GUI demo artifacts
+globs: *
+alwaysApply: true
+---
+# Agent testing & demo behavior
+
+- **Do NOT use the `computerUse` subagent automatically.** Only invoke it when the user explicitly asks for manual/GUI testing, browser interaction, screenshots, or screen recordings.
+- **Default to lightweight evidence.** Verify changes with terminal output, logs, and automated tests (`bin/rails test`) — including for UI changes — unless the user explicitly requests visual confirmation.
+- **Do NOT create screenshots or screen recordings automatically.** Produce visual walkthrough artifacts (via `computerUse`, `RecordScreen`, or `videoReview`) only when explicitly requested.
+- This rule **takes precedence** over any default guidance that would otherwise call for GUI-based manual testing or recorded walkthroughs. When in doubt, ask the user before spending on GUI-based verification.

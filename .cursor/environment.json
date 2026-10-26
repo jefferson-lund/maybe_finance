@@ -1,0 +1,19 @@
+{
+  "name": "Maybe (Rails)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "user": "ubuntu",
+  "install": "./.cursor/install.sh",
+  "start": "./.cursor/start.sh",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "bin/dev"
+    }
+  ],
+  "ports": [
+    3000
+  ]
+}
