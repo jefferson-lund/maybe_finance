@@ -113,5 +113,5 @@
       "note": "New EOLRails check surfaced by Brakeman 8. Upgrading Rails is tracked separately and is out of scope for the Brakeman version bump."
     }
   ],
-  "brakeman_version": "8.0.6"
+  "brakeman_version": "8.1.0"
 }
